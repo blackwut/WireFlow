@@ -6,7 +6,7 @@ sys.path.insert(0, path.join(os.path.pardir))
 from FSP import *
 
 
-def round_up(n):
+def next_power_of_two(n):
     if n == 0:
         return 1
     if n & (n - 1) == 0:
@@ -25,15 +25,13 @@ source_node = FNode('source',
                     source_par,
                     FNodeKind.SOURCE,
                     FGatherMode.NONE,
-                    FDispatchMode.KEYBY,
-                    channel_depth=16)
+                    FDispatchMode.KEYBY)
 
 avg_node = FNode('average_calculator',
                  avg_par,
                  FNodeKind.MAP,
                  FGatherMode.NON_BLOCKING,
                  FDispatchMode.RR_BLOCKING,
-                 'tuple_t',
                  begin_function=True)
 
 spike_node = FNode('spike_detector',
@@ -48,10 +46,10 @@ sink_node = FNode('sink',
                   FGatherMode.NON_BLOCKING,
                   FDispatchMode.NONE)
 
-win_dim = 16                              # window size
-max_keys = 64                             # max num. of keys in total
-avg_keys = round_up(max_keys // avg_par)  # max num. of keys per replica
-threshold = 0.025                         # temperature threshold
+win_dim = 16                                       # window size
+max_keys = 64                                      # max n. of keys in total
+avg_keys = next_power_of_two(max_keys // avg_par)  # max n. of keys per replica
+threshold = 0.025                                  # property threshold
 constants = {'WIN_DIM': win_dim,
              'THRESHOLD': threshold,
              'MAX_KEYS': max_keys,
@@ -65,15 +63,15 @@ avg_node.add_local_buffer('float',
                           'windows',
                           size=(avg_keys, win_dim))
 
-pipe_folder = 'sd_base{:02d}{:02d}{:02d}{:02d}'.format(source_par,
-                                                       avg_par,
-                                                       spike_par,
-                                                       sink_par)
+pipe_folder = 'sdb_float{:02d}{:02d}{:02d}{:02d}'.format(source_par,
+                                                         avg_par,
+                                                         spike_par,
+                                                         sink_par)
 
 pipe = FPipe(pipe_folder,
-            'input_t',
-            constants=constants,
-            codebase='./codebase')
+             'tuple_t',
+             constants=constants,
+             codebase='./codebase')
 pipe.add_source(source_node)
 pipe.add(avg_node)
 pipe.add(spike_node)
@@ -81,4 +79,4 @@ pipe.add_sink(sink_node)
 
 pipe.finalize()
 pipe.generate_device()
-pipe.generate_host(True)
+pipe.generate_host()

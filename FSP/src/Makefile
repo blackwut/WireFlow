@@ -22,7 +22,7 @@ SRCS := $(wildcard host/*.cpp)
 LIBS := rt pthread
 
 # Host Directories
-INC_DIRS := common includes
+INC_DIRS := common includes util includes/rapidjson/include
 LIB_DIRS :=
 
 # Target
@@ -84,7 +84,7 @@ ifeq ($(DEBUG),1)
 CXXFLAGS += -g
 AOC_FLAGS += -g -profile=all
 else
-CXXFLAGS += -O2
+CXXFLAGS += -O3
 AOC_FLAGS += -g0
 endif
 
@@ -115,6 +115,12 @@ device: $(DEVICE_CODE_DIR)/$(DEVICE_CODE).cl $(TARGET_DEVICE_DIR)
 		$(DEVICE_CODE_DIR)/$(DEVICE_CODE).cl \
 		$(foreach D,$(DEVICE_INCLUDES),-I$D) \
 		-o $(TARGET_DEVICE_DIR)/$(TARGET_DEVICE).aocx
+
+%.aocx: $(TARGET_DEVICE_DIR)
+	$(ECHO)$(AOC) $(AOC_BOARD) $(AOC_FLAGS) \
+		$(DEVICE_CODE_DIR)/$*.cl \
+		$(foreach D,$(DEVICE_INCLUDES),-I$D) \
+		-o $(TARGET_DEVICE_DIR)/$*.aocx
 
 report: $(DEVICE_CODE_DIR)/$(DEVICE_CODE).cl
 	$(ECHO)rm -rf $(TARGET_DEVICE_DIR)/$(TARGET_DEVICE)

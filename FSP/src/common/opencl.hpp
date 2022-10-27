@@ -9,7 +9,8 @@
 #include <sys/stat.h>
 #include <ctime>
 
-#define CL_TARGET_OPENCL_VERSION 200
+// #define CL_TARGET_OPENCL_VERSION 200
+// #define CL_USE_DEPRECATED_OPENCL_1_2_APIS
 #include "CL/opencl.h"
 #include "CL/cl_ext_intelfpga.h"
 
@@ -344,8 +345,6 @@ cl_program clCreateBuildProgramFromBinary(cl_context context, const cl_device_id
         clCheckError(clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, log_size, param_value.data(), NULL));
         std::cout << std::string(param_value.begin(), param_value.end()) << std::endl;
         exit(-1);
-    } else {
-        std::cout << "Program built!" << std::endl;
     }
 
     return program;
@@ -426,4 +425,17 @@ double clTimeEventNS(cl_event event)
 double clTimeEventMS(cl_event event)
 {
     return clTimeBetweenEventsMS(event, event);
+}
+
+cl_int clGetTemperature(cl_device_id device)
+{
+    cl_int temperature = 0;
+    cl_int status = 0;
+    status = clGetDeviceInfo(device,
+                             CL_DEVICE_CORE_TEMPERATURE_INTELFPGA,
+                             sizeof(cl_int), &temperature, NULL);
+    if (status == CL_SUCCESS) {
+        return temperature;
+    }
+    return 0;
 }

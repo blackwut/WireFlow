@@ -138,7 +138,7 @@ struct F{{ n.name }}
             cl_int status;
             cl_mem buff = clCreateBuffer(ocl.context,
                                          CL_MEM_HOST_WRITE_ONLY | {{ b.get_flags() }},
-                                         {{ b.size }} * sizeof({{ b.datatype }}),
+                                         {{ b.get_total_size() }} * sizeof({{ b.datatype }}),
                                          NULL, &status);
             clCheckErrorMsg(status, "Failed to create {{ b.name }}");
 
@@ -154,7 +154,7 @@ struct F{{ n.name }}
         clCheckError(clEnqueueWriteBuffer({{ b.get_queues_name('replica_id' if b.is_access_single() else '0') }},
                                           {{ b.get_buffers_name('replica_id' if b.is_access_single() else '0') }},
                                           CL_TRUE, 0,
-                                          {{ b.size }} * sizeof({{ b.datatype }}), data.data(),
+                                          {{ b.get_total_size() }} * sizeof({{ b.datatype }}), data.data(),
                                           0, NULL, NULL));
     }
     {% endfor %}
@@ -275,7 +275,7 @@ struct F{{ n.name }}
             cl_int status;
             cl_mem buff = clCreateBuffer(ocl.context,
                                          CL_MEM_HOST_WRITE_ONLY | {{ b.get_flags() }},
-                                         {{ b.size }} * sizeof({{ b.datatype }}),
+                                         {{ b.get_total_size() }} * sizeof({{ b.datatype }}),
                                          NULL, &status);
             clCheckErrorMsg(status, "Failed to create {{ b.name }}");
 
@@ -303,7 +303,7 @@ struct F{{ n.name }}
         clCheckError(clEnqueueWriteBuffer({{ b.get_queues_name('replica_id' if b.is_access_single() else '0') }},
                                           {{ b.get_buffers_name('replica_id' if b.is_access_single() else '0') }},
                                           CL_TRUE, 0,
-                                          {{ b.size }} * sizeof({{ b.datatype }}), data.data(),
+                                          {{ b.get_total_size() }} * sizeof({{ b.datatype }}), data.data(),
                                           0, NULL, NULL));
     }
 

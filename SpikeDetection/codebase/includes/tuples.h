@@ -1,22 +1,23 @@
 #ifndef __TUPLES_H
 #define __TUPLES_H
-typedef struct {
-    uint device_id;
-    float temperature;
-} input_t;
 
-inline uint input_t_getKey(input_t data) {
-    return data.device_id;
-}
+
+#if defined(INTELFPGA_CL)
+    #define UINT_T uint
+#else
+    #define UINT_T uint32_t
+#endif
+
 
 typedef struct {
-    uint device_id;
-    float temperature;
-    float average;
+    UINT_T key;
+    float property_value;
+    float incremental_average;
+    UINT_T timestamp;
 } tuple_t;
 
-inline uint tuple_t_getKey(tuple_t data) {
-    return data.device_id;
+inline UINT_T tuple_t_getKey(tuple_t data) {
+    return data.key;
 }
 
 #endif //__TUPLES_H

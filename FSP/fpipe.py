@@ -246,7 +246,9 @@ class FPipe:
                         file = open(filename, mode='w+')
                         result = template.render(node=n,
                                                  nodeKind=FNodeKind,
-                                                 dispatchMode=FDispatchMode)
+                                                 dispatchMode=FDispatchMode,
+                                                 transfer_mode=self.transfer_mode,
+                                                 transferMode=FTransferMode)
                         file.write(result)
                         file.close()
 
@@ -290,7 +292,7 @@ class FPipe:
                                  transfer_mode=self.transfer_mode,
                                  transferMode=FTransferMode)
 
-        filename = path.join(self.device_dir, 'device.cl')
+        filename = path.join(self.device_dir, self.dest_dir + '.cl')
         if not path.isfile(filename) or rewrite_device:
             file = open(filename, mode='w+')
             file.write(result)

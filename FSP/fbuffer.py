@@ -126,6 +126,8 @@ class FBufferPrivate(FBuffer):
             d += ']'
         elif self.ptr:
             d += ' * ' + self.name
+        else:
+            d += ' ' + self.name
 
         return d
 
@@ -207,7 +209,7 @@ class FBufferGlobal(FBuffer):
         return (not self.ptr and self.value is not None)    # the second condition just to be sure
 
     def is_ptr_parameter(self):
-        return self.size[0] > 1
+        return self.size[0] > 1 or self.ptr
 
     def is_global(self):
         return True
@@ -268,3 +270,11 @@ class FBufferGlobal(FBuffer):
                              self.name,
                              '=',
                              str(self.value)])
+
+    # TODO: make more generic and use idx value
+    def get_total_size(self, idx=None):
+        s = 1
+        for i in self.size:
+            s *= i
+        return str(s)
+

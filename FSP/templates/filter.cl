@@ -44,8 +44,8 @@ CL_SINGLE_TASK {{ node.kernel_name(idx) }}({{ node.parameter_global_buffers() }}
 
 
 {% macro process_tuple(node, idx, t_in, t_out) -%}
+{{ node.create_o_tuple(t_out, t_in + '.data') }};
 if ({{ node.call_function(t_in + '.data') }}) {
-    {{ node.create_o_tuple(t_out, t_in + '.data') }};
     {{ ch.dispatch_tuple(node, idx, 'w', t_out, true) }}
 }
 {%- endmacro %}

@@ -53,7 +53,7 @@ CL_SINGLE_TASK {{node.kernel_name(idx)}}(__global volatile header_t * restrict h
 CL_SINGLE_TASK {{node.kernel_name(idx)}}(__global {{ node.o_datatype }} * restrict data,
 {% filter indent(node.kernel_name(idx)|length + 16, true) %}
 const uint size,
-__global _sink_context_t * restrict context)
+__global sink_context_t * restrict context)
 {% endfilter %}
 {
     uint n = 0;
