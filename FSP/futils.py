@@ -52,9 +52,11 @@ def generate_flat_map_code(node_name, filename):
 
 
 def read_template_file(source_code_dir, path):
-    templates = os.path.join(os.path.dirname(__file__), "templates")
-    sources = source_code_dir
-    loader = jinja.FileSystemLoader(searchpath=[templates, sources])
+    templates = [os.path.join(os.path.dirname(__file__), "templates"),
+                 os.path.join(os.path.dirname(__file__), "templates", "device"),
+                 os.path.join(os.path.dirname(__file__), "templates", "host"),
+                 source_code_dir]
+    loader = jinja.FileSystemLoader(searchpath=templates) # source_code_dir is needed for flat_map operator?
     # sources_tmp = os.path.join(sources, 'tmp')
     # loader = jinja.FileSystemLoader(searchpath=[templates, sources, sources_tmp])
 
