@@ -1,4 +1,5 @@
 import sys
+import os
 from os import path
 from enum import Enum
 from shutil import copyfile
@@ -37,24 +38,30 @@ class FPipe:
         """
         app
         ├── common
+        ├── ocl
         ├── device
         │   └── includes
         │   └── nodes
-        ├── host
-        ├── includes
-        └── sources
+        └── host
+            └── includes
+            └── metric
         """
         self.base_dir = self.dest_dir
-        self.common_dir = path.join(self.dest_dir, 'common')
-        self.includes_dir = path.join(self.dest_dir, 'includes')
-        self.host_dir = path.join(self.dest_dir, 'host')
-        self.device_dir = path.join(self.dest_dir, 'device')
-        self.dev_inc_dir = path.join(self.device_dir, 'includes')
-        self.nodes_dir = path.join(self.device_dir, 'nodes')
+        self.common_dir = path.join(self.base_dir, 'common')
 
-        for folder in (self.base_dir, self.common_dir, self.includes_dir,
-                       self.host_dir, self.device_dir, self.dev_inc_dir,
-                       self.nodes_dir):
+        self.ocl_dir = path.join(self.base_dir, 'ocl')
+    
+        self.device_dir = path.join(self.base_dir, 'device')
+        self.device_includes_dir = path.join(self.device_dir, 'includes')
+        self.device_nodes_dir = path.join(self.device_dir, 'nodes')
+
+        self.host_dir = path.join(self.base_dir, 'host')
+        self.host_includes_dir = path.join(self.host_dir, 'includes')
+        self.host_metric_dir = path.join(self.host_dir, 'metric')
+
+        for folder in (self.base_dir, self.common_dir, self.ocl_dir,
+                       self.device_dir, self.device_includes_dir, self.device_nodes_dir,
+                       self.host_dir, self.host_includes_dir, self.host_metric_dir):
             if not path.isdir(folder):
                 os.mkdir(folder)
 
@@ -143,7 +150,7 @@ class FPipe:
 
     def generate_fsp(self):
         filename = 'fsp.cl'
-        filepath = path.join(self.dev_inc_dir, filename)
+        filepath = path.join(self.device_includes_dir, filename)
 
         template = read_template_file(self.dest_dir, 'fsp.cl')
         file = open(filepath, mode='w+')
@@ -153,7 +160,7 @@ class FPipe:
 
     def generate_fsp_tuples(self):
         filename = 'fsp_tuples.cl'
-        filepath = path.join(self.dev_inc_dir, filename)
+        filepath = path.join(self.device_includes_dir, filename)
 
         template = read_template_file(self.dest_dir, 'fsp_tuples.cl')
         file = open(filepath, mode='w+')
@@ -161,10 +168,22 @@ class FPipe:
         file.write(result)
         file.close()
 
+    def generate_constants(self,
+                           rewrite=False):
+        filename = 'constants.h'
+        template = read_template_file(self.dest_dir, filename)
+        result = template.render(constants=self.constants | self.get_par_constants())
+
+        filename = path.join(self.common_dir, filename)
+        if not path.isfile(filename) or rewrite:
+            file = open(filename, mode='w+')
+            file.write(result)
+            file.close()
+
     def generate_tuples(self,
                         rewrite=False):
         filename = 'tuples.h'
-        filepath = path.join(self.includes_dir, filename)
+        filepath = path.join(self.common_dir, filename)
         # do not generate tuples if they are already present in codebase folder
         # tuples.h from codebase is copied into the includes folder
         if self.codebase:
@@ -198,7 +217,9 @@ class FPipe:
 
         # Generates all unique datatype
         result = ("#ifndef __TUPLES_H\n"
-                  "#define __TUPLES_H\n")
+                  "#define __TUPLES_H\n"
+                  "\n"
+                  "#include \"constants.h\"\n")
         for t in tuples:
             result += ("typedef struct {\n"
                        "    uint key;\n"
@@ -219,7 +240,7 @@ class FPipe:
         template = read_template_file(self.dest_dir, 'function.cl')
 
         # do not generate functions if they are already present in codebase folder
-        # copy each function from codebase into the self.nodes_dir
+        # copy each function from codebase into the self.device_nodes_dir
         # not present functions will be generated
         if self.codebase:
             codebase_nodes_dir = path.join(self.codebase, 'device', 'nodes')
@@ -227,21 +248,23 @@ class FPipe:
                 if n.has_functions():
                     filename = n.name + '.cl'
                     codebase_filepath = path.join(codebase_nodes_dir, filename)
-                    filepath = path.join(self.nodes_dir, filename)
+                    filepath = path.join(self.device_nodes_dir, filename)
                     if path.isfile(codebase_filepath):
                         copyfile(codebase_filepath, filepath)
                     elif not path.isfile(filepath) or rewrite:
                         file = open(filepath, mode='w+')
                         result = template.render(node=n,
                                                  nodeKind=FNodeKind,
-                                                 dispatchMode=FDispatchMode)
+                                                 dispatchMode=FDispatchMode,
+                                                 transfer_mode=self.transfer_mode,
+                                                 transferMode=FTransferMode)
                         file.write(result)
                         file.close()
         else: #TODO RIVEDERE TUTTA LA FUNZIONE
             template = read_template_file(self.dest_dir, 'function.cl')
             for n in self.get_nodes():
                 if n.has_functions():
-                    filename = path.join(self.nodes_dir, n.name + '.cl')
+                    filename = path.join(self.device_nodes_dir, n.name + '.cl')
                     if not path.isfile(filename) or rewrite:
                         file = open(filename, mode='w+')
                         result = template.render(node=n,
@@ -267,13 +290,13 @@ class FPipe:
         self.generate_functions(rewrite_functions)
 
         nodes = self.get_nodes()
-        includes = [path.join(self.includes_dir, 'tuples.h')]
+        includes = [path.join(self.common_dir, 'tuples.h')]
 
         # Creates functions
         node_functions = []
         for n in nodes:
             filename = n.name + '.cl'
-            filepath = path.join(self.nodes_dir, filename)
+            filepath = path.join(self.device_nodes_dir, filename)
             if path.isfile(filepath):
                 if n.is_flat_map():
                     n.flat_map = generate_flat_map_code(n.name, filepath)
@@ -304,6 +327,24 @@ class FPipe:
                 if path.isfile(n.flat_map):
                     os.remove(n.flat_map)
 
+    def generate_fsource(self, rewrite=False):
+        template = read_template_file(self.dest_dir, 'fsource.hpp')
+        filename = path.join(self.host_includes_dir, 'fsource.hpp')
+        if not path.isfile(filename) or rewrite:
+            file = open(filename, mode='w+')
+            result = template.render(source=self.source)
+            file.write(result)
+            file.close()
+
+    def generate_fsink(self, rewrite=False):
+        template = read_template_file(self.dest_dir, 'fsink.hpp')
+        filename = path.join(self.host_includes_dir, 'fsink.hpp')
+        if not path.isfile(filename) or rewrite:
+            file = open(filename, mode='w+')
+            result = template.render(sink=self.sink)
+            file.write(result)
+            file.close()
+
     def generate_pipe(self, rewrite=False):
         nodes = self.get_nodes()
         buffers = []
@@ -323,7 +364,7 @@ class FPipe:
                 buffers_set.add(b.name)
 
         template = read_template_file(self.dest_dir, 'pipe.hpp')
-        filename = path.join(self.includes_dir, 'pipe.hpp')
+        filename = path.join(self.host_includes_dir, 'pipe.hpp')
         if not path.isfile(filename) or rewrite:
             file = open(filename, mode='w+')
             result = template.render(nodes=self.internal_nodes,
@@ -337,6 +378,10 @@ class FPipe:
                                      bufferAccess=FBufferAccess)
             file.write(result)
             file.close()
+        
+        self.generate_fsource(rewrite)
+        self.generate_fsink(rewrite)
+
 
     def generate_host(self,
                       rewrite=False,
@@ -346,7 +391,21 @@ class FPipe:
         rewrite_host = rewrite or rewrite_host
         rewrite_pipe = rewrite or rewrite_pipe
 
+        self.generate_constants(rewrite)
         self.generate_pipe(rewrite_pipe)
+
+        # Copy codebase files (host.cpp, dataset.hpp)
+        # TODO: formalize which files are copied
+       
+        # HOST.CPP
+        filename = path.join(self.codebase, 'host.cpp')
+        if path.isfile(filename):
+            copyfile(filename, path.join(self.host_dir, 'host.cpp'))
+        
+        # DATASET.HPP
+        filename = path.join(self.codebase, 'includes', 'dataset.hpp')
+        if path.isfile(filename):
+            copyfile(filename, path.join(self.host_includes_dir, 'dataset.hpp'))
 
         template = read_template_file(self.dest_dir, 'host.cpp')
         filename = path.join(self.host_dir, 'host.cpp')
@@ -360,12 +419,23 @@ class FPipe:
             file.write(result)
             file.close()
 
-        common_dir = os.path.join(os.path.dirname(__file__), "src", 'common')
-        files = ['buffers.hpp', 'common.hpp', 'ocl.hpp', 'opencl.hpp', 'utils.hpp']
+        # OCL
+        ocl_dir = os.path.join(os.path.dirname(__file__), "src", 'ocl')
+        files = ['fbuffers.hpp', 'ocl.hpp', 'opencl.hpp', 'utils.hpp']
 
         for f in files:
-            src_path = path.join(common_dir, f)
-            dest_path = path.join(self.common_dir, f)
+            src_path = path.join(ocl_dir, f)
+            dest_path = path.join(self.ocl_dir, f)
+            if not path.isfile(dest_path):
+                copyfile(src_path, dest_path)
+
+        # Metric
+        metric_dir = os.path.join(os.path.dirname(__file__), "src", 'metric')
+        files = ['metric_group.hpp', 'metric.hpp', 'sampler.hpp']
+
+        for f in files:
+            src_path = path.join(metric_dir, f)
+            dest_path = path.join(self.host_metric_dir, f)
             if not path.isfile(dest_path):
                 copyfile(src_path, dest_path)
 
@@ -375,3 +445,14 @@ class FPipe:
 
         if not path.isfile(make_dst_dir):
             copyfile(make_src_dir, make_dst_dir)
+
+    def generate_code(self,
+                      rewrite=False,
+                      rewrite_device=False,
+                      rewrite_functions=False,
+                      rewirte_tuples=False,
+                      rewrite_host=False,
+                      rewrite_pipe=False):
+        self.finalize()
+        self.generate_device(rewrite, rewrite_device, rewrite_functions, rewirte_tuples)
+        self.generate_host(rewrite, rewrite_host, rewrite_pipe)
