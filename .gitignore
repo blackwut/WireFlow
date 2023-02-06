@@ -124,3 +124,6 @@ Session.vim
 
 # Python
 *.pyc
+env
+
+.vscode
