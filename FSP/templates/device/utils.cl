@@ -9,12 +9,8 @@
 
 {% macro decleare_defines(constants) -%}
 #include "includes/fsp.cl"
-
-{% for key, value in constants.items() %}
-#define {{ '%-50s' | format((key | upper)) + (value | string) }}
-{% endfor %}
-
-#include "../includes/tuples.h"
+#include "../common/constants.h"
+#include "../common/tuples.h"
 #include "includes/fsp_tuples.cl"
 {% for f in node_functions %}
 #include "nodes/{{ f }}"
