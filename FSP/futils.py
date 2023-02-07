@@ -52,9 +52,11 @@ def generate_flat_map_code(node_name, filename):
 
 
 def read_template_file(source_code_dir, path):
-    templates = os.path.join(os.path.dirname(__file__), "templates")
-    sources = source_code_dir
-    loader = jinja.FileSystemLoader(searchpath=[templates, sources])
+    templates = [os.path.join(os.path.dirname(__file__), "templates"),
+                 os.path.join(os.path.dirname(__file__), "templates", "device"),
+                 os.path.join(os.path.dirname(__file__), "templates", "host"),
+                 source_code_dir]
+    loader = jinja.FileSystemLoader(searchpath=templates) # source_code_dir is needed for flat_map operator?
     # sources_tmp = os.path.join(sources, 'tmp')
     # loader = jinja.FileSystemLoader(searchpath=[templates, sources, sources_tmp])
 
@@ -67,19 +69,3 @@ def read_template_file(source_code_dir, path):
     env.trim_blocks = True
     env.filters['generate_flat_map'] = generate_flat_map_code
     return env.get_template(path)
-
-
-
-
-#define __NL__
-#define QQ(X) #X
-
-#define send(x) {{node.o_channel.tupletype}} {{tuple_var_out}} = create_{{node.o_channel.tupletype}}(QQ(x));\
-# __NL__ {{ ch.dispatch_tuple(node, idx, QQ(x), idx, tuple_var_out, true) }}
-# // {{node.o_channel.tupletype}} {{tuple_var_out}} = create_{{node.o_channel.tupletype}}('x');\
-# // {{ ch.dispatch_tuple(node, idx, \' + var_name + "', idx, tuple_var_out, true) }}")
-
-#define __SEND(var_name)\
-# "\n\n"\
-# "        {{ node.create_o_tuple('t_out', '" #var_name"') }};\n"\
-# "        {{ ch.dispatch_tuple(node, 'idx', 'w', 't_out', true) | indent(8)}}"

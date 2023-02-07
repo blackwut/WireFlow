@@ -5,27 +5,29 @@ inline void average_calculator_begin(__private int sizes[AVG_KEYS],
     for (int i = 0; i < AVG_KEYS; ++i) {
         sizes[i] = 0;
     }
+
+    for (int i = 0; i < AVG_KEYS; ++i) {
+        #pragma unroll
+        for (int j = 0; j < WIN_DIM; ++j) {
+            windows[i][j] = 0;
+        }
+    }
 }
 
 inline tuple_t average_calculator_function(input_t in,
                                           __private int sizes[AVG_KEYS],
                                           __local float windows[AVG_KEYS][WIN_DIM])
 {
-    const uint idx = in.device_id / __AVERAGE_CALCULATOR_PAR;
-    const float val = in.temperature;
+    const uint idx = in.key / __AVERAGE_CALCULATOR_PAR;
+    const float val = in.property_value;
 
-    float N = 0.0f;
-    #pragma unroll
-    for (uint i = 0; i < WIN_DIM; ++i) {
-        if (sizes[idx] == ((1 << i) >> 1)) N = 1.0f / (i + 1);
-    }
+#undef STATEMENT
+#define STATEMENT(i) N = 1.0 / (sizes[i] == WIN_DIM ? sizes[i] : ++sizes[i]);
 
-    if (sizes[idx] & (1 << (WIN_DIM - 2))) {
-        sizes[idx] = (1 << (WIN_DIM - 2));
-    } else {
-        sizes[idx] = (sizes[idx] == 0 ? 1 : sizes[idx] << 1);
-    }
-    float sum = 0.0f;
+    float N = 0.0;
+    SWITCH_CASE(idx, 63)
+
+    float sum = 0.0;
     #pragma unroll
     for (uint i = 0; i < WIN_DIM - 1; ++i) {
         windows[idx][i] = windows[idx][i + 1];
@@ -35,8 +37,12 @@ inline tuple_t average_calculator_function(input_t in,
     sum += val;
 
     tuple_t out;
-    out.device_id = in.device_id;
-    out.temperature = in.temperature;
-    out.average = sum * N;
+    out.key = in.key;
+    out.property_value = in.property_value;
+    out.incremental_average = sum * N;
+
+#ifdef MEASURE_LATENCY
+    out.timestamp = in.timestamp;
+#endif
     return out;
 }

@@ -109,7 +109,10 @@ class FNode:
         return [b for b in self.buffers if type(b) is FBufferGlobal and not b.has_value()]
 
     def get_global_buffers(self):
-        return [b for b in self.buffers if type(b) is FBufferGlobal]
+        # return [b for b in self.buffers if type(b) is FBufferGlobal]
+        wo_value = self.get_global_no_value_buffers()
+        w_value = self.get_global_value_buffers()
+        return wo_value + w_value
 
 #
 # Jinja2 auxiliary functions
