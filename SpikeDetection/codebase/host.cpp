@@ -336,56 +336,56 @@ int main(int argc, char * argv[])
         if (outfile) {
             if (write_header_flag) {
 
-                outfile << "path"            << delim
-                    << "source_par" << delim
-                    << "average_calculator_par"    << delim
-                    << "spike_detector_par"    << delim
-                    << "sink_par"   << delim
-                    << "transfer_type"       << delim
-                    << "source_buffers"      << delim
-                    << "source_batch_size"   << delim
-                    << "sink_buffers"        << delim
-                    << "sink_batch_size"     << delim
-                    << "time_ms"             << delim
-                    << "throughput"          << delim
-                    << "source_bandwidth"    << delim
-                    << "sink_bandwidth"      << delim
-                    << "total_bandwidth"     << delim
-                    << "drop_ratio"          << delim
+                outfile << "path"               << delim
+                    << "source_par"             << delim
+                    << "average_calculator_par" << delim
+                    << "spike_detector_par"     << delim
+                    << "sink_par"               << delim
+                    << "transfer_type"          << delim
+                    << "source_buffers"         << delim
+                    << "source_batch_size"      << delim
+                    << "sink_buffers"           << delim
+                    << "sink_batch_size"        << delim
+                    << "time_ms"                << delim
+                    << "throughput"             << delim
+                    << "source_bandwidth"       << delim
+                    << "sink_bandwidth"         << delim
+                    << "total_bandwidth"        << delim
+                    << "drop_ratio"             << delim
 #ifdef MEASURE_LATENCY
-                    << "latency_samples"     << delim
-                    << "latency_mean"        << delim
-                    << "latency_p05"         << delim
-                    << "latency_p25"         << delim
-                    << "latency_p50"         << delim
-                    << "latency_p75"         << delim
+                    << "latency_samples"        << delim
+                    << "latency_mean"           << delim
+                    << "latency_p05"            << delim
+                    << "latency_p25"            << delim
+                    << "latency_p50"            << delim
+                    << "latency_p75"            << delim
                     << "latency_p95"
 #endif
                     << '\n';
             }
 
-            outfile << current_path << delim
-                    << source_par                      << delim
-                    << average_calculator_par                         << delim
-                    << spike_detector_par                         << delim
-                    << sink_par                        << delim
-                    << transfer_type_str                        << delim
-                    << COUT_INTEGER << source_buffers           << delim
-                    << COUT_INTEGER << source_batch_size        << delim
-                    << COUT_INTEGER << sink_buffers             << delim
-                    << COUT_INTEGER << sink_batch_size          << delim
-                    << COUT_FLOAT   << elapsed_time_ms_pipe     << delim
-                    << COUT_INTEGER << (uint64_t)throughput     << delim
-                    << COUT_FLOAT   << bandwidth_source         << delim
-                    << COUT_FLOAT   << bandwidth_sink           << delim
-                    << COUT_FLOAT   << bandwidth                << delim
-                    << COUT_FLOAT   << drop_ratio               << delim;
+            outfile << current_path                         << delim
+                    << source_par                           << delim
+                    << average_calculator_par               << delim
+                    << spike_detector_par                   << delim
+                    << sink_par                             << delim
+                    << transfer_type_str                    << delim
+                    << COUT_INTEGER << source_buffers       << delim
+                    << COUT_INTEGER << source_batch_size    << delim
+                    << COUT_INTEGER << sink_buffers         << delim
+                    << COUT_INTEGER << sink_batch_size      << delim
+                    << COUT_FLOAT   << elapsed_time_ms_pipe << delim
+                    << COUT_INTEGER << (uint64_t)throughput << delim
+                    << COUT_FLOAT   << bandwidth_source     << delim
+                    << COUT_FLOAT   << bandwidth_sink       << delim
+                    << COUT_FLOAT   << bandwidth            << delim
+                    << COUT_FLOAT   << drop_ratio           << delim;
 #ifdef MEASURE_LATENCY
             outfile << COUT_INTEGER << latency.getSamplesSize()    << delim
                     << COUT_INTEGER << (uint64_t)latency.getMean() << delim;
-                    for (auto p : {0.05, 0.25, 0.5, 0.75, 0.95}) {
-                        outfile << COUT_INTEGER << (uint64_t)latency.getPercentile(p) << delim;
-                    }
+            for (auto p : {0.05, 0.25, 0.5, 0.75, 0.95}) {
+                outfile << COUT_INTEGER << (uint64_t)latency.getPercentile(p) << delim;
+            }
 #endif
             outfile << '\n';
         }
