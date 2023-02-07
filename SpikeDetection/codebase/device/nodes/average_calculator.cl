@@ -40,6 +40,9 @@ inline tuple_t average_calculator_function(input_t in,
     out.key = in.key;
     out.property_value = in.property_value;
     out.incremental_average = sum * N;
+
+#ifdef MEASURE_LATENCY
     out.timestamp = in.timestamp;
+#endif
     return out;
 }
