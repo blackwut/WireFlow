@@ -148,7 +148,11 @@ std::string get_aocx_filepath(const std::vector<size_t> & pars,
     ss << "t";
 #endif
 
-    ss << "f"; // TODO: check if is float or double
+    if (sizeof(FLOAT_T) == sizeof(float)) {
+        ss << "f";
+    } else {
+        ss << "d";
+    }
 
     for (auto & p : pars) {
         ss << std::to_string(p);
