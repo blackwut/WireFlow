@@ -14,7 +14,7 @@ inline void average_calculator_begin(__private int sizes[AVG_KEYS],
     }
 }
 
-inline tuple_t average_calculator_function(tuple_t in,
+inline tuple_t average_calculator_function(input_t in,
                                           __private int sizes[AVG_KEYS],
                                           __local float windows[AVG_KEYS][WIN_DIM])
 {
