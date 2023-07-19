@@ -4,7 +4,7 @@ from os import path
 from enum import Enum
 from shutil import copyfile
 from .futils import *
-from .fnode import *
+from .foperator import *
 from .fchannel import *
 
 # TODO: add check on all types (including FBuffer types) before create device/host files
@@ -17,7 +17,7 @@ class FTarget(Enum):
     INTEL = 1
     XILINX = 2
 
-class FPipe:
+class FApplication:
 
     def __init__(self,
                  dest_dir: str,
@@ -91,30 +91,30 @@ class FPipe:
 # User's functions
 #
     def add_source(self,
-                   source: FNode):
+                   source: FOperator):
         assert source
         assert not self.source
 
-        if source.kind == FNodeKind.SOURCE:
+        if source.kind == FOperatorKind.SOURCE:
             self.source = source
         else:
             sys.exit("Supplied node is not of type SOURCE")
 
     def add_sink(self,
-                 sink: FNode):
+                 sink: FOperator):
         assert sink
         assert not self.sink
 
-        if sink.kind == FNodeKind.SINK:
+        if sink.kind == FOperatorKind.SINK:
             self.sink = sink
         else:
             sys.exit("Supplied node is not of type SINK")
 
     def add(self,
-            node: FNode):
+            node: FOperator):
         assert node
 
-        if node.kind not in (FNodeKind.SOURCE, FNodeKind.SINK):
+        if node.kind not in (FOperatorKind.SOURCE, FOperatorKind.SINK):
             self.internal_nodes.append(node)
         else:
             sys.exit("Supplied node is not of type MAP, FILTER, FLAT_MAP, GENERATOR, or COLLECTOR")
@@ -259,7 +259,7 @@ class FPipe:
                     elif not path.isfile(filepath) or rewrite:
                         file = open(filepath, mode='w+')
                         result = template.render(node=n,
-                                                 nodeKind=FNodeKind,
+                                                 nodeKind=FOperatorKind,
                                                  dispatchMode=FDispatchMode,
                                                  transfer_mode=self.transfer_mode,
                                                  transferMode=FTransferMode)
@@ -273,7 +273,7 @@ class FPipe:
                     if not path.isfile(filename) or rewrite:
                         file = open(filename, mode='w+')
                         result = template.render(node=n,
-                                                 nodeKind=FNodeKind,
+                                                 nodeKind=FOperatorKind,
                                                  dispatchMode=FDispatchMode,
                                                  transfer_mode=self.transfer_mode,
                                                  transferMode=FTransferMode)
@@ -309,7 +309,7 @@ class FPipe:
                     node_functions.append(filename)
 
         template = read_template_file('.', 'device.cl')
-        result = template.render(nodeKind=FNodeKind,
+        result = template.render(nodeKind=FOperatorKind,
                                  gatherKind=FGatherMode,
                                  dispatchKind=FDispatchMode,
                                  nodes=nodes,
@@ -328,7 +328,7 @@ class FPipe:
 
         # Removes 'flat_map' temporary files
         for n in nodes:
-            if n.kind == FNodeKind.FLAT_MAP:
+            if n.kind == FOperatorKind.FLAT_MAP:
                 if path.isfile(n.flat_map):
                     os.remove(n.flat_map)
 
@@ -379,7 +379,7 @@ class FPipe:
                                      transfer_mode=self.transfer_mode,
                                      constants=self.constants | self.get_par_constants(),
                                      transferMode=FTransferMode,
-                                     nodeKind=FNodeKind,
+                                     nodeKind=FOperatorKind,
                                      bufferAccess=FBufferAccess)
             file.write(result)
             file.close()

@@ -42,28 +42,28 @@ constants = {'FLOAT_T': precision_t,
              'THRESHOLD': str(threshold) + ('f' if precision_t == 'float' else ''),
              'STATE_SIZE': state_size}
 
-source_node = FNode('source',
+source_node = FOperator('source',
                     source_par,
-                    FNodeKind.SOURCE,
+                    FOperatorKind.SOURCE,
                     FGatherMode.NONE,
                     FDispatchMode.KEYBY)
 
-predictor_node = FNode('predictor',
+predictor_node = FOperator('predictor',
                        predictor_par,
-                       FNodeKind.MAP,
+                       FOperatorKind.MAP,
                        FGatherMode.NON_BLOCKING,
                        FDispatchMode.RR_BLOCKING,
                        o_datatype='tuple_t')
 
-filter_node = FNode('filter',
+filter_node = FOperator('filter',
                     filter_par,
-                    FNodeKind.FILTER,
+                    FOperatorKind.FILTER,
                     FGatherMode.NON_BLOCKING,
                     FDispatchMode.RR_BLOCKING)
 
-sink_node = FNode('sink',
+sink_node = FOperator('sink',
                   sink_par,
-                  FNodeKind.SINK,
+                  FOperatorKind.SINK,
                   FGatherMode.NON_BLOCKING,
                   FDispatchMode.NONE)
 
@@ -89,7 +89,7 @@ pipe_folder = 'fd{}{}{}{:d}{:d}{:d}{:d}'.format(transfer_char,
                                                 filter_par,
                                                 sink_par)
 
-pipe = FPipe(pipe_folder,
+pipe = FApplication(pipe_folder,
              'input_t',
              constants=constants,
              transfer_mode=transfer_t,

@@ -1,10 +1,10 @@
-from .fnode import FNode
+from .foperator import FOperator
 
 
 class FChannel:
     def __init__(self,
-                 i_node: FNode,
-                 o_node: FNode,
+                 i_node: FOperator,
+                 o_node: FOperator,
                  depth: int = 0):
         assert i_node
         assert o_node

@@ -21,30 +21,30 @@ avg_par = 1
 spike_par = 1
 collector_par = 1
 
-generator_node = FNode('generator',
+generator_node = FOperator('generator',
                        generator_par,
-                       FNodeKind.GENERATOR,
+                       FOperatorKind.GENERATOR,
                        FGatherMode.NONE,
                        FDispatchMode.KEYBY,
                        channel_depth=16)
 
-avg_node = FNode('average_calculator',
+avg_node = FOperator('average_calculator',
                  avg_par,
-                 FNodeKind.MAP,
+                 FOperatorKind.MAP,
                  FGatherMode.NON_BLOCKING,
                  FDispatchMode.RR_BLOCKING,
                  'tuple_t',
                  begin_function=True)
 
-spike_node = FNode('spike_detector',
+spike_node = FOperator('spike_detector',
                    spike_par,
-                   FNodeKind.FILTER,
+                   FOperatorKind.FILTER,
                    FGatherMode.NON_BLOCKING,
                    FDispatchMode.RR_NON_BLOCKING)
 
-collector_node = FNode('collector',
+collector_node = FOperator('collector',
                        collector_par,
-                       FNodeKind.COLLECTOR,
+                       FOperatorKind.COLLECTOR,
                        FGatherMode.NON_BLOCKING,
                        FDispatchMode.NONE)
 
@@ -73,7 +73,7 @@ pipe_folder = 'sd_skeleton{:02d}{:02d}{:02d}{:02d}'.format(generator_par,
                                                            spike_par,
                                                            collector_par)
 
-pipe = FPipe(pipe_folder,
+pipe = FApplication(pipe_folder,
              'tuple_t',
              constants=constants,
              codebase='./codebase_skeleton')

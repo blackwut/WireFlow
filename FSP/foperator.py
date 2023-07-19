@@ -7,7 +7,7 @@ from .fgather import FGatherMode
 from .fbuffer import FBufferPrivate, FBufferLocal, FBufferGlobal, FBufferAccess
 
 
-class FNodeKind(Enum):
+class FOperatorKind(Enum):
     NONE = 1
     SOURCE = 2
     FILTER = 3
@@ -18,11 +18,11 @@ class FNodeKind(Enum):
     COLLECTOR = 8
 
 
-class FNode:
+class FOperator:
     def __init__(self,
                  name: str,
                  par: int,
-                 kind: FNodeKind,
+                 kind: FOperatorKind,
                  gather_mode: FGatherMode,
                  dispatch_mode: FDispatchMode,
                  o_datatype: str = None,
@@ -32,7 +32,7 @@ class FNode:
                  end_function: bool = False):
         assert name
         assert par > 0
-        assert isinstance(kind, FNodeKind)
+        assert isinstance(kind, FOperatorKind)
         assert isinstance(gather_mode, FGatherMode)
         assert isinstance(dispatch_mode, FDispatchMode)
         # assert o_datatype or kind is FNodeKind.COLLECTOR
@@ -48,7 +48,7 @@ class FNode:
         self.o_datatype = o_datatype
         self.channel_depth = channel_depth
         self.begin_function = begin_function
-        self.compute_function = (kind not in (FNodeKind.SOURCE, FNodeKind.SINK, FNodeKind.COLLECTOR)) or compute_function
+        self.compute_function = (kind not in (FOperatorKind.SOURCE, FOperatorKind.SINK, FOperatorKind.COLLECTOR)) or compute_function
         self.end_function = end_function
 
         self.i_channel = None
@@ -189,25 +189,25 @@ class FNode:
 
 # FNodeKind
     def is_source(self):
-        return self.kind == FNodeKind.SOURCE
+        return self.kind == FOperatorKind.SOURCE
 
     def is_filter(self):
-        return self.kind == FNodeKind.FILTER
+        return self.kind == FOperatorKind.FILTER
 
     def is_map(self):
-        return self.kind == FNodeKind.MAP
+        return self.kind == FOperatorKind.MAP
 
     def is_flat_map(self):
-        return self.kind == FNodeKind.FLAT_MAP
+        return self.kind == FOperatorKind.FLAT_MAP
 
     def is_sink(self):
-        return self.kind == FNodeKind.SINK
+        return self.kind == FOperatorKind.SINK
 
     def is_generator(self):
-        return self.kind == FNodeKind.GENERATOR
+        return self.kind == FOperatorKind.GENERATOR
 
     def is_collector(self):
-        return self.kind == FNodeKind.COLLECTOR
+        return self.kind == FOperatorKind.COLLECTOR
 
 # Channels
     def read(self, i, j):

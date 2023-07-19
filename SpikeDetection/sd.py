@@ -29,29 +29,29 @@ transfer_char = ('s' if transfer_t == FTransferMode.SHARED else 'c')
 benchmark_char = ('t' if benchmark_t == 'throughput' else 'l')
 precision_char = ('f' if precision_t == 'float' else 'd')
 
-source_node = FNode('source',
+source_node = FOperator('source',
                     source_par,
-                    FNodeKind.SOURCE,
+                    FOperatorKind.SOURCE,
                     FGatherMode.NONE,
                     FDispatchMode.KEYBY)
 
-avg_node = FNode('average_calculator',
+avg_node = FOperator('average_calculator',
                  avg_par,
-                 FNodeKind.MAP,
+                 FOperatorKind.MAP,
                  FGatherMode.NON_BLOCKING,
                  FDispatchMode.RR_BLOCKING,
                  begin_function=True,
                  o_datatype='tuple_t')
 
-spike_node = FNode('spike_detector',
+spike_node = FOperator('spike_detector',
                    spike_par,
-                   FNodeKind.FILTER,
+                   FOperatorKind.FILTER,
                    FGatherMode.NON_BLOCKING,
                    FDispatchMode.RR_NON_BLOCKING)
 
-sink_node = FNode('sink',
+sink_node = FOperator('sink',
                   sink_par,
-                  FNodeKind.SINK,
+                  FOperatorKind.SINK,
                   FGatherMode.NON_BLOCKING,
                   FDispatchMode.NONE)
 
@@ -80,7 +80,7 @@ pipe_folder = 'sd{}{}{}{:d}{:d}{:d}{:d}'.format(transfer_char,
                                                 spike_par,
                                                 sink_par)
 
-pipe = FPipe(pipe_folder,
+pipe = FApplication(pipe_folder,
              ('input_t' if benchmark_t == 'throughput' else 'tuple_t'),
              constants=constants,
              transfer_mode=transfer_t,
