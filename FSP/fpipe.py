@@ -13,12 +13,16 @@ class FTransferMode(Enum):
     COPY = 1
     SHARED = 2
 
+class FTarget(Enum):
+    INTEL = 1
+    XILINX = 2
 
 class FPipe:
 
     def __init__(self,
                  dest_dir: str,
                  datatype: str,
+                 target: FTarget = FTarget.INTEL,
                  transfer_mode: FTransferMode = FTransferMode.COPY,
                  codebase: str = None,
                  constants: dict = {}):
@@ -26,6 +30,7 @@ class FPipe:
 
         self.dest_dir = dest_dir
         self.datatype = datatype
+        self.target = target
         self.transfer_mode = transfer_mode
         self.codebase = codebase
         self.constants = constants
@@ -50,7 +55,7 @@ class FPipe:
         self.common_dir = path.join(self.base_dir, 'common')
 
         self.ocl_dir = path.join(self.base_dir, 'ocl')
-    
+
         self.device_dir = path.join(self.base_dir, 'device')
         self.device_includes_dir = path.join(self.device_dir, 'includes')
         self.device_nodes_dir = path.join(self.device_dir, 'nodes')
@@ -378,7 +383,7 @@ class FPipe:
                                      bufferAccess=FBufferAccess)
             file.write(result)
             file.close()
-        
+
         self.generate_fsource(rewrite)
         self.generate_fsink(rewrite)
 
@@ -394,14 +399,16 @@ class FPipe:
         self.generate_constants(rewrite)
         self.generate_pipe(rewrite_pipe)
 
+
+        template_subpath = ("intel" if self.target == FTarget.INTEL else "xilinx")
         # Copy codebase files (host.cpp, dataset.hpp)
         # TODO: formalize which files are copied
-       
+
         # HOST.CPP
         filename = path.join(self.codebase, 'host.cpp')
         if path.isfile(filename):
             copyfile(filename, path.join(self.host_dir, 'host.cpp'))
-        
+
         # DATASET.HPP
         filename = path.join(self.codebase, 'includes', 'dataset.hpp')
         if path.isfile(filename):
@@ -420,7 +427,7 @@ class FPipe:
             file.close()
 
         # OCL
-        ocl_dir = os.path.join(os.path.dirname(__file__), "src", 'ocl')
+        ocl_dir = os.path.join(os.path.dirname(__file__), "src", template_subpath, 'ocl')
         files = ['fbuffers.hpp', 'ocl.hpp', 'opencl.hpp', 'utils.hpp']
 
         for f in files:
@@ -430,7 +437,7 @@ class FPipe:
                 copyfile(src_path, dest_path)
 
         # Metric
-        metric_dir = os.path.join(os.path.dirname(__file__), "src", 'metric')
+        metric_dir = os.path.join(os.path.dirname(__file__), "src", template_subpath, 'metric')
         files = ['metric_group.hpp', 'metric.hpp', 'sampler.hpp']
 
         for f in files:
@@ -440,7 +447,7 @@ class FPipe:
                 copyfile(src_path, dest_path)
 
         # Makefile
-        make_src_dir = os.path.join(os.path.dirname(__file__), "src", 'Makefile')
+        make_src_dir = os.path.join(os.path.dirname(__file__), "src", template_subpath, 'Makefile')
         make_dst_dir = path.join(self.base_dir, 'Makefile')
 
         if not path.isfile(make_dst_dir):
