@@ -27,6 +27,11 @@ class FApplication:
                  codebase: str = None,
                  constants: dict = {}):
         assert dest_dir
+        assert datatype
+        assert isinstance(target, FTarget)
+        assert isinstance(transfer_mode, FTransferMode)
+        assert codebase is None or path.isdir(codebase)
+        assert isinstance(constants, dict)
 
         self.dest_dir = dest_dir
         self.datatype = datatype
@@ -39,36 +44,8 @@ class FApplication:
         self.internal_nodes = []
         self.sink = None
 
-    def prepare_folders(self):
-        """
-        app
-        ├── common
-        ├── ocl
-        ├── device
-        │   └── includes
-        │   └── nodes
-        └── host
-            └── includes
-            └── metric
-        """
-        self.base_dir = self.dest_dir
-        self.common_dir = path.join(self.base_dir, 'common')
-
-        self.ocl_dir = path.join(self.base_dir, 'ocl')
-
-        self.device_dir = path.join(self.base_dir, 'device')
-        self.device_includes_dir = path.join(self.device_dir, 'includes')
-        self.device_nodes_dir = path.join(self.device_dir, 'nodes')
-
-        self.host_dir = path.join(self.base_dir, 'host')
-        self.host_includes_dir = path.join(self.host_dir, 'includes')
-        self.host_metric_dir = path.join(self.host_dir, 'metric')
-
-        for folder in (self.base_dir, self.common_dir, self.ocl_dir,
-                       self.device_dir, self.device_includes_dir, self.device_nodes_dir,
-                       self.host_dir, self.host_includes_dir, self.host_metric_dir):
-            if not path.isdir(folder):
-                os.mkdir(folder)
+        self.intel_generator = FGeneratorIntel(self)
+        self.xilinx_generator = FGeneratorXilinx(self)
 
     def get_nodes(self):
         nodes = []
@@ -79,17 +56,74 @@ class FApplication:
             nodes.append(self.sink)
         return nodes
 
-    def get_par_constants(self):
-        cs = {}
-        nodes = self.get_nodes()
-        for n in nodes:
-            key = '__' + n.name.upper() + '_PAR'
-            cs[key] = n.par
-        return cs
+    def generate_host(self,
+                      rewrite=False,
+                      rewrite_host=False,
+                      rewrite_pipe=False):
+        if self.target == FTarget.INTEL:
+            self.intel_generator.generate_host(rewrite,
+                                               rewrite_host,
+                                               rewrite_pipe)
+        elif self.target == FTarget.XILINX:
+            self.xilinx_generator.generate_host(rewrite,
+                                                rewrite_host,
+                                                rewrite_pipe)
+        else:
+            sys.exit("Target not supported")
 
+    def generate_device(self,
+                        rewrite=False,
+                        rewrite_device=False,
+                        rewrite_functions=False,
+                        rewirte_tuples=False,
+                        rewrite_keyby_lambdas=False):
+        if self.target == FTarget.INTEL:
+            self.intel_generator.generate_device(rewrite,
+                                                 rewrite_device,
+                                                 rewrite_functions,
+                                                 rewirte_tuples)
+        elif self.target == FTarget.XILINX:
+            self.xilinx_generator.generate_device(rewrite,
+                                                  rewrite_device,
+                                                  rewrite_functions,
+                                                  rewirte_tuples,
+                                                  rewrite_keyby_lambdas)
+        else:
+            sys.exit("Target not supported")
+
+    def generate_code(self,
+                    rewrite=False,
+                    rewrite_device=False,
+                    rewrite_functions=False,
+                    rewirte_tuples=False,
+                    rewrite_host=False,
+                    rewrite_pipe=False,
+                    rewrite_keyby_lambdas=False):
+        if self.target == FTarget.INTEL:
+            self.intel_generator(rewrite,
+                                 rewrite_device,
+                                 rewrite_functions,
+                                 rewirte_tuples,
+                                 rewrite_host,
+                                 rewrite_pipe)
+        elif self.target == FTarget.XILINX:
+            self.xilinx_generator(rewrite,
+                                  rewrite_device,
+                                  rewrite_functions,
+                                  rewirte_tuples,
+                                  rewrite_host,
+                                  rewrite_pipe,
+                                  rewrite_keyby_lambdas)
+        else:
+            sys.exit("Target not supported")
+
+
+################################################################################
 #
 # User's functions
 #
+################################################################################
+
     def add_source(self,
                    source: FOperator):
         assert source
@@ -150,36 +184,70 @@ class FApplication:
                 cur.i_channel = c
                 self.channels.append(c)
 
-        # Creates folders
-        self.prepare_folders()
+        # # Creates folders
+        # self.prepare_folders()
 
-    def generate_fsp(self):
-        filename = 'fsp.cl'
-        filepath = path.join(self.device_includes_dir, filename)
 
-        template = read_template_file(self.dest_dir, 'fsp.cl')
-        file = open(filepath, mode='w+')
-        result = template.render(sink=self.sink)
-        file.write(result)
-        file.close()
+class FGeneratorIntel:
 
-    def generate_fsp_tuples(self):
-        filename = 'fsp_tuples.cl'
-        filepath = path.join(self.device_includes_dir, filename)
+    def __init__(self,
+                 app: FApplication):
+        assert app
+        self.app = app
 
-        template = read_template_file(self.dest_dir, 'fsp_tuples.cl')
-        file = open(filepath, mode='w+')
-        result = template.render(channels=self.channels)
-        file.write(result)
-        file.close()
+    def get_par_constants(self):
+        cs = {}
+        nodes = self.app.get_nodes()
+        for n in nodes:
+            key = '__' + n.name.upper() + '_PAR'
+            cs[key] = n.par
+        return cs
+
+    def prepare_folders(self):
+        """
+        app
+        ├── common
+        ├── ocl
+        ├── device
+        │   └── includes
+        │   └── nodes
+        └── host
+            └── includes
+            └── metric
+        """
+        self.app.base_dir = self.app.dest_dir
+        self.app.common_dir = path.join(self.app.base_dir, 'common')
+
+        self.app.ocl_dir = path.join(self.app.base_dir, 'ocl')
+
+        self.app.device_dir = path.join(self.app.base_dir, 'device')
+        self.app.device_includes_dir = path.join(self.app.device_dir, 'includes')
+        self.app.device_nodes_dir = path.join(self.app.device_dir, 'nodes')
+
+        self.app.host_dir = path.join(self.app.base_dir, 'host')
+        self.app.host_includes_dir = path.join(self.app.host_dir, 'includes')
+        self.app.host_metric_dir = path.join(self.app.host_dir, 'metric')
+
+        for folder in (self.app.base_dir, self.app.common_dir, self.app.ocl_dir,
+                       self.app.device_dir, self.app.device_includes_dir, self.app.device_nodes_dir,
+                       self.app.host_dir, self.app.host_includes_dir, self.app.host_metric_dir):
+            if not path.isdir(folder):
+                os.mkdir(folder)
+
+
+################################################################################
+#
+# Common generation functions
+#
+################################################################################
 
     def generate_constants(self,
                            rewrite=False):
         filename = 'constants.h'
-        template = read_template_file(self.dest_dir, filename)
-        result = template.render(constants=self.constants | self.get_par_constants())
+        template = read_template_file(self.app.dest_dir, filename)
+        result = template.render(constants=self.app.constants | self.get_par_constants())
 
-        filename = path.join(self.common_dir, filename)
+        filename = path.join(self.app.common_dir, filename)
         if not path.isfile(filename) or rewrite:
             file = open(filename, mode='w+')
             file.write(result)
@@ -188,11 +256,11 @@ class FApplication:
     def generate_tuples(self,
                         rewrite=False):
         filename = 'tuples.h'
-        filepath = path.join(self.common_dir, filename)
+        filepath = path.join(self.app.common_dir, filename)
         # do not generate tuples if they are already present in codebase folder
         # tuples.h from codebase is copied into the includes folder
-        if self.codebase:
-            codebase_filepath = path.join(self.codebase, 'includes', filename)
+        if self.app.codebase:
+            codebase_filepath = path.join(self.app.codebase, 'includes', filename)
             if path.isfile(codebase_filepath):
                 copyfile(codebase_filepath, filepath)
                 return
@@ -202,14 +270,14 @@ class FApplication:
         if path.isfile(filepath) and not rewrite:
             return
 
-        # nodes = [self.source]
-        # nodes.extend(self.internal_nodes)
-        # nodes.append(self.sink)
+        # nodes = [self.app.source]
+        # nodes.extend(self.app.internal_nodes)
+        # nodes.append(self.app.sink)
 
         # Gathers all unique datatype
         tuples = set()
-        tuples.add(self.datatype)
-        for n in self.get_nodes():
+        tuples.add(self.app.datatype)
+        for n in self.app.get_nodes():
             tuples.add(n.o_datatype)
 
         # Remove None object if any
@@ -242,18 +310,18 @@ class FApplication:
 
     def generate_functions(self,
                            rewrite=False):
-        template = read_template_file(self.dest_dir, 'function.cl')
+        template = read_template_file(self.app.dest_dir, 'function.cl')
 
         # do not generate functions if they are already present in codebase folder
-        # copy each function from codebase into the self.device_nodes_dir
+        # copy each function from codebase into the self.app.device_nodes_dir
         # not present functions will be generated
-        if self.codebase:
-            codebase_nodes_dir = path.join(self.codebase, 'device', 'nodes')
-            for n in self.get_nodes():
+        if self.app.codebase:
+            codebase_nodes_dir = path.join(self.app.codebase, 'device', 'nodes')
+            for n in self.app.get_nodes():
                 if n.has_functions():
                     filename = n.name + '.cl'
                     codebase_filepath = path.join(codebase_nodes_dir, filename)
-                    filepath = path.join(self.device_nodes_dir, filename)
+                    filepath = path.join(self.app.device_nodes_dir, filename)
                     if path.isfile(codebase_filepath):
                         copyfile(codebase_filepath, filepath)
                     elif not path.isfile(filepath) or rewrite:
@@ -261,97 +329,78 @@ class FApplication:
                         result = template.render(node=n,
                                                  nodeKind=FOperatorKind,
                                                  dispatchMode=FDispatchMode,
-                                                 transfer_mode=self.transfer_mode,
+                                                 transfer_mode=self.app.transfer_mode,
                                                  transferMode=FTransferMode)
                         file.write(result)
                         file.close()
         else: #TODO RIVEDERE TUTTA LA FUNZIONE
-            template = read_template_file(self.dest_dir, 'function.cl')
-            for n in self.get_nodes():
+            template = read_template_file(self.app.dest_dir, 'function.cl')
+            for n in self.app.get_nodes():
                 if n.has_functions():
-                    filename = path.join(self.device_nodes_dir, n.name + '.cl')
+                    filename = path.join(self.app.device_nodes_dir, n.name + '.cl')
                     if not path.isfile(filename) or rewrite:
                         file = open(filename, mode='w+')
                         result = template.render(node=n,
                                                  nodeKind=FOperatorKind,
                                                  dispatchMode=FDispatchMode,
-                                                 transfer_mode=self.transfer_mode,
+                                                 transfer_mode=self.app.transfer_mode,
                                                  transferMode=FTransferMode)
                         file.write(result)
                         file.close()
 
-    def generate_device(self,
-                        rewrite=False,
-                        rewrite_device=False,
-                        rewrite_functions=False,
-                        rewirte_tuples=False):
-        rewrite_device = rewrite or rewrite_device
-        rewrite_functions = rewrite or rewrite_functions
-        rewirte_tuples = rewrite or rewirte_tuples
 
-        self.generate_fsp()
-        self.generate_tuples(rewirte_tuples)
-        self.generate_fsp_tuples()
-        self.generate_functions(rewrite_functions)
+################################################################################
+#
+# Device generation functions
+#
+################################################################################
 
-        nodes = self.get_nodes()
-        includes = [path.join(self.common_dir, 'tuples.h')]
+    def generate_fsp(self):
+        filename = 'fsp.cl'
+        filepath = path.join(self.app.device_includes_dir, filename)
 
-        # Creates functions
-        node_functions = []
-        for n in nodes:
-            filename = n.name + '.cl'
-            filepath = path.join(self.device_nodes_dir, filename)
-            if path.isfile(filepath):
-                if n.is_flat_map():
-                    n.flat_map = generate_flat_map_code(n.name, filepath)
-                else:
-                    node_functions.append(filename)
+        template = read_template_file(self.app.dest_dir, 'fsp.cl')
+        file = open(filepath, mode='w+')
+        result = template.render(sink=self.app.sink)
+        file.write(result)
+        file.close()
 
-        template = read_template_file('.', 'device.cl')
-        result = template.render(nodeKind=FOperatorKind,
-                                 gatherKind=FGatherMode,
-                                 dispatchKind=FDispatchMode,
-                                 nodes=nodes,
-                                 channels=self.channels,
-                                 includes=includes,
-                                 node_functions=node_functions,
-                                 constants=self.constants | self.get_par_constants(),
-                                 transfer_mode=self.transfer_mode,
-                                 transferMode=FTransferMode)
+    def generate_fsp_tuples(self):
+        filename = 'fsp_tuples.cl'
+        filepath = path.join(self.app.device_includes_dir, filename)
 
-        filename = path.join(self.device_dir, self.dest_dir + '.cl')
-        if not path.isfile(filename) or rewrite_device:
-            file = open(filename, mode='w+')
-            file.write(result)
-            file.close()
+        template = read_template_file(self.app.dest_dir, 'fsp_tuples.cl')
+        file = open(filepath, mode='w+')
+        result = template.render(channels=self.app.channels)
+        file.write(result)
+        file.close()
 
-        # Removes 'flat_map' temporary files
-        for n in nodes:
-            if n.kind == FOperatorKind.FLAT_MAP:
-                if path.isfile(n.flat_map):
-                    os.remove(n.flat_map)
+################################################################################
+#
+# Host generation functions
+#
+################################################################################
 
     def generate_fsource(self, rewrite=False):
-        template = read_template_file(self.dest_dir, 'fsource.hpp')
-        filename = path.join(self.host_includes_dir, 'fsource.hpp')
+        template = read_template_file(self.app.dest_dir, 'fsource.hpp')
+        filename = path.join(self.app.host_includes_dir, 'fsource.hpp')
         if not path.isfile(filename) or rewrite:
             file = open(filename, mode='w+')
-            result = template.render(source=self.source)
+            result = template.render(source=self.app.source)
             file.write(result)
             file.close()
 
     def generate_fsink(self, rewrite=False):
-        template = read_template_file(self.dest_dir, 'fsink.hpp')
-        filename = path.join(self.host_includes_dir, 'fsink.hpp')
+        template = read_template_file(self.app.dest_dir, 'fsink.hpp')
+        filename = path.join(self.app.host_includes_dir, 'fsink.hpp')
         if not path.isfile(filename) or rewrite:
             file = open(filename, mode='w+')
-            result = template.render(sink=self.sink)
+            result = template.render(sink=self.app.sink)
             file.write(result)
             file.close()
 
     def generate_pipe(self, rewrite=False):
-        nodes = self.get_nodes()
+        nodes = self.app.get_nodes()
         buffers = []
         for n in nodes:
             for b in n.get_global_buffers():
@@ -368,16 +417,16 @@ class FApplication:
             else:
                 buffers_set.add(b.name)
 
-        template = read_template_file(self.dest_dir, 'pipe.hpp')
-        filename = path.join(self.host_includes_dir, 'pipe.hpp')
+        template = read_template_file(self.app.dest_dir, 'pipe.hpp')
+        filename = path.join(self.app.host_includes_dir, 'pipe.hpp')
         if not path.isfile(filename) or rewrite:
             file = open(filename, mode='w+')
-            result = template.render(nodes=self.internal_nodes,
-                                     source=self.source,
-                                     sink=self.sink,
+            result = template.render(nodes=self.app.internal_nodes,
+                                     source=self.app.source,
+                                     sink=self.app.sink,
                                      buffers=buffers,
-                                     transfer_mode=self.transfer_mode,
-                                     constants=self.constants | self.get_par_constants(),
+                                     transfer_mode=self.app.transfer_mode,
+                                     constants=self.app.constants | self.get_par_constants(),
                                      transferMode=FTransferMode,
                                      nodeKind=FOperatorKind,
                                      bufferAccess=FBufferAccess)
@@ -388,6 +437,67 @@ class FApplication:
         self.generate_fsink(rewrite)
 
 
+################################################################################
+#
+# User's functions
+#
+################################################################################
+
+    def generate_device(self,
+                        rewrite=False,
+                        rewrite_device=False,
+                        rewrite_functions=False,
+                        rewirte_tuples=False):
+        rewrite_device = rewrite or rewrite_device
+        rewrite_functions = rewrite or rewrite_functions
+        rewirte_tuples = rewrite or rewirte_tuples
+
+        self.app.finalize()
+        self.prepare_folders()
+
+        self.generate_fsp()
+        self.generate_tuples(rewirte_tuples)
+        self.generate_fsp_tuples()
+        self.generate_functions(rewrite_functions)
+
+        nodes = self.app.get_nodes()
+        includes = [path.join(self.app.common_dir, 'tuples.h')]
+
+        # Creates functions
+        node_functions = []
+        for n in nodes:
+            filename = n.name + '.cl'
+            filepath = path.join(self.app.device_nodes_dir, filename)
+            if path.isfile(filepath):
+                if n.is_flat_map():
+                    n.flat_map = generate_flat_map_code(n.name, filepath)
+                else:
+                    node_functions.append(filename)
+
+        template = read_template_file('.', 'device.cl')
+        result = template.render(nodeKind=FOperatorKind,
+                                 gatherKind=FGatherMode,
+                                 dispatchKind=FDispatchMode,
+                                 nodes=nodes,
+                                 channels=self.app.channels,
+                                 includes=includes,
+                                 node_functions=node_functions,
+                                 constants=self.app.constants | self.get_par_constants(),
+                                 transfer_mode=self.app.transfer_mode,
+                                 transferMode=FTransferMode)
+
+        filename = path.join(self.app.device_dir, self.app.dest_dir + '.cl')
+        if not path.isfile(filename) or rewrite_device:
+            file = open(filename, mode='w+')
+            file.write(result)
+            file.close()
+
+        # Removes 'flat_map' temporary files
+        for n in nodes:
+            if n.kind == FOperatorKind.FLAT_MAP:
+                if path.isfile(n.flat_map):
+                    os.remove(n.flat_map)
+
     def generate_host(self,
                       rewrite=False,
                       rewrite_host=False,
@@ -396,32 +506,35 @@ class FApplication:
         rewrite_host = rewrite or rewrite_host
         rewrite_pipe = rewrite or rewrite_pipe
 
+        self.app.finalize()
+        self.prepare_folders()
+
         self.generate_constants(rewrite)
         self.generate_pipe(rewrite_pipe)
 
 
-        template_subpath = ("intel" if self.target == FTarget.INTEL else "xilinx")
+        template_subpath = ("intel" if self.app.target == FTarget.INTEL else "xilinx")
         # Copy codebase files (host.cpp, dataset.hpp)
         # TODO: formalize which files are copied
 
         # HOST.CPP
-        filename = path.join(self.codebase, 'host.cpp')
+        filename = path.join(self.app.codebase, 'host.cpp')
         if path.isfile(filename):
-            copyfile(filename, path.join(self.host_dir, 'host.cpp'))
+            copyfile(filename, path.join(self.app.host_dir, 'host.cpp'))
 
         # DATASET.HPP
-        filename = path.join(self.codebase, 'includes', 'dataset.hpp')
+        filename = path.join(self.app.codebase, 'includes', 'dataset.hpp')
         if path.isfile(filename):
-            copyfile(filename, path.join(self.host_includes_dir, 'dataset.hpp'))
+            copyfile(filename, path.join(self.app.host_includes_dir, 'dataset.hpp'))
 
-        template = read_template_file(self.dest_dir, 'host.cpp')
-        filename = path.join(self.host_dir, 'host.cpp')
+        template = read_template_file(self.app.dest_dir, 'host.cpp')
+        filename = path.join(self.app.host_dir, 'host.cpp')
         if not path.isfile(filename) or rewrite_host:
             file = open(filename, mode='w+')
-            result = template.render(nodes=self.internal_nodes,
-                                     source=self.source,
-                                     sink=self.sink,
-                                     transfer_mode=self.transfer_mode,
+            result = template.render(nodes=self.app.internal_nodes,
+                                     source=self.app.source,
+                                     sink=self.app.sink,
+                                     transfer_mode=self.app.transfer_mode,
                                      transferMode=FTransferMode)
             file.write(result)
             file.close()
@@ -432,7 +545,7 @@ class FApplication:
 
         for f in files:
             src_path = path.join(ocl_dir, f)
-            dest_path = path.join(self.ocl_dir, f)
+            dest_path = path.join(self.app.ocl_dir, f)
             if not path.isfile(dest_path):
                 copyfile(src_path, dest_path)
 
@@ -442,13 +555,13 @@ class FApplication:
 
         for f in files:
             src_path = path.join(metric_dir, f)
-            dest_path = path.join(self.host_metric_dir, f)
+            dest_path = path.join(self.app.host_metric_dir, f)
             if not path.isfile(dest_path):
                 copyfile(src_path, dest_path)
 
         # Makefile
         make_src_dir = os.path.join(os.path.dirname(__file__), "src", template_subpath, 'Makefile')
-        make_dst_dir = path.join(self.base_dir, 'Makefile')
+        make_dst_dir = path.join(self.app.base_dir, 'Makefile')
 
         if not path.isfile(make_dst_dir):
             copyfile(make_src_dir, make_dst_dir)
@@ -460,6 +573,397 @@ class FApplication:
                       rewirte_tuples=False,
                       rewrite_host=False,
                       rewrite_pipe=False):
-        self.finalize()
+        self.app.finalize()
+        self.prepare_folders()
         self.generate_device(rewrite, rewrite_device, rewrite_functions, rewirte_tuples)
         self.generate_host(rewrite, rewrite_host, rewrite_pipe)
+
+
+class FGeneratorXilinx:
+
+    def __init__(self,
+                 app: FApplication):
+        assert app
+        self.app = app
+
+    def get_par_constants(self):
+        cs = {}
+        nodes = self.app.get_nodes()
+        for n in nodes:
+            key = n.get_par_macro()
+            cs[key] = n.par
+        return cs
+
+    def prepare_folders(self):
+        """
+        app
+        ├── common
+        ├── ocl
+        ├── device
+        │   └── includes
+        │   └── nodes
+        └── host
+            └── includes
+            └── metric
+        """
+        self.app.base_dir = self.app.dest_dir
+        self.app.common_dir = path.join(self.app.base_dir, 'common')
+
+        self.app.ocl_dir = path.join(self.app.base_dir, 'ocl')
+
+        self.app.device_dir = path.join(self.app.base_dir, 'device')
+        self.app.device_includes_dir = path.join(self.app.device_dir, 'includes')
+        self.app.device_nodes_dir = path.join(self.app.device_dir, 'nodes')
+
+        self.app.host_dir = path.join(self.app.base_dir, 'host')
+        self.app.host_includes_dir = path.join(self.app.host_dir, 'includes')
+        self.app.host_metric_dir = path.join(self.app.host_dir, 'metric')
+
+        for folder in (self.app.base_dir, self.app.common_dir, self.app.ocl_dir,
+                       self.app.device_dir, self.app.device_includes_dir, self.app.device_nodes_dir,
+                       self.app.host_dir, self.app.host_includes_dir, self.app.host_metric_dir):
+            if not path.isdir(folder):
+                os.mkdir(folder)
+
+
+################################################################################
+#
+# Common generation functions
+#
+################################################################################
+
+    def get_tuples(self):
+        tuples = set()
+        tuples.add(self.app.datatype)
+        for n in self.app.get_nodes():
+            tuples.add(n.o_datatype)
+
+        # Remove None object if any
+        if None in tuples:
+            tuples.remove(None)
+
+        # Remove '' object if any
+        if '' in tuples:
+            tuples.remove('')
+
+        return tuples
+
+    def generate_constants(self,
+                           rewrite=False):
+        filename = 'constants.hpp'
+        template = read_template_file(self.app.dest_dir, filename, 'xilinx')
+        result = template.render(constants=self.app.constants | self.get_par_constants())
+
+        filepath = path.join(self.app.common_dir, filename)
+        if not path.isfile(filepath) or rewrite:
+            file = open(filepath, mode='w+')
+            file.write(result)
+            file.close()
+
+    def generate_keyby_lambdas(self, rewrite=False):
+        filename = "keyby_lambdas.hpp"
+        template = read_template_file(self.app.dest_dir, filename, 'xilinx')
+        filepath = path.join(self.app.device_includes_dir, filename)
+        if not path.isfile(filepath) or rewrite:
+            file = open(filepath, mode='w+')
+            result = template.render(nodes=self.app.get_nodes()[:-1], next_nodes=self.app.get_nodes()[1:])
+            file.write(result)
+            file.close()
+
+    def generate_tuples(self,
+                        rewrite=False):
+
+        template = read_template_file(self.app.dest_dir, 'tuple.hpp', 'xilinx')
+        tuples = self.get_tuples()
+
+        for tuple in tuples:
+            filename = tuple + '.hpp'
+            filepath = path.join(self.app.common_dir, filename)
+            # do not generate tuples if they are already present in codebase folder
+            # tuples.h from codebase is copied into the includes folder
+            if self.app.codebase:
+                codebase_filepath = path.join(self.app.codebase, 'includes', filename)
+                if path.isfile(codebase_filepath):
+                    copyfile(codebase_filepath, filepath)
+                    return
+
+            # do not generate tuples if are already present or rewrite is false
+            if path.isfile(filepath) and not rewrite:
+                return
+
+            file = open(filepath, mode='w+')
+            result = template.render(tuple_name=tuple)
+            file.write(result)
+            file.close()
+
+    def generate_functor_for(self, node):
+        template = read_template_file(self.app.dest_dir, 'operator.cpp', 'xilinx')
+        filename = node.name + '.cpp'
+        filepath = path.join(self.app.device_nodes_dir, filename)
+
+        file = open(filepath, mode='w+')
+        result = template.render(op=node)
+        file.write(result)
+        file.close()
+
+    def generate_functions(self,
+                           rewrite=False):
+
+        for node in self.app.internal_nodes:
+            is_generated = False
+            filename = node.name + '.cpp'
+            filepath = path.join(self.app.device_nodes_dir, filename)
+
+            if self.app.codebase:
+                codebase_filepath = path.join(self.app.codebase, 'device', 'nodes', filename)
+                if path.isfile(codebase_filepath):
+                    copyfile(codebase_filepath, filepath)
+                    is_generated = True
+
+            if path.isfile(filepath) and not rewrite:
+                is_generated = True
+
+            if not is_generated:
+                self.generate_functor_for(node)
+
+    def generate_makefile(self, rewrite=False):
+        template = read_template_file(self.app.dest_dir, 'Makefile', 'xilinx')
+        filepath = path.join(self.app.base_dir, 'Makefile')
+        if not path.isfile(filepath) or rewrite:
+            file = open(filepath, mode='w+')
+            result = template.render(operators=self.app.get_nodes(),
+                                     mr=self.app.source,
+                                     mw=self.app.sink)
+            file.write(result)
+            file.close()
+
+
+################################################################################
+#
+# Device generation functions
+#
+################################################################################
+
+    def generate_defines(self, rewrite=False):
+        template = read_template_file(self.app.dest_dir, 'defines.hpp', 'xilinx')
+        filename = path.join(self.app.device_includes_dir, 'defines.hpp')
+
+        if not path.isfile(filename) or rewrite:
+            tuples = self.get_tuples()
+            file = open(filename, mode='w+')
+            result = template.render(tuples=tuples,
+                                     mr=self.app.source,
+                                     mw=self.app.sink,
+                                     datatypes=self.get_tuples())
+            file.write(result)
+            file.close()
+
+    def generate_mr_kernel(self, rewrite=False):
+        template = read_template_file(self.app.dest_dir, 'memory_reader.cpp', 'xilinx')
+        filename = path.join(self.app.device_dir, 'memory_reader.cpp')
+        if not path.isfile(filename) or rewrite:
+            file = open(filename, mode='w+')
+            result = template.render()
+            file.write(result)
+            file.close()
+
+    def generate_compute_kernel(self, rewrite=False):
+        template = read_template_file(self.app.dest_dir, 'compute.cpp', 'xilinx')
+        filename = path.join(self.app.device_dir, 'compute.cpp')
+        if not path.isfile(filename) or rewrite:
+            file = open(filename, mode='w+')
+            result = template.render(operators=self.app.internal_nodes,
+                                     nodes=self.app.get_nodes(),
+                                     mr=self.app.source,
+                                     mw=self.app.sink)
+            file.write(result)
+            file.close()
+
+    def generate_mw_kernel(self, rewrite=False):
+        template = read_template_file(self.app.dest_dir, 'memory_writer.cpp', 'xilinx')
+        filename = path.join(self.app.device_dir, 'memory_writer.cpp')
+        if not path.isfile(filename) or rewrite:
+            file = open(filename, mode='w+')
+            result = template.render()
+            file.write(result)
+            file.close()
+
+    def generate_kernels(self, rewrite=False):
+        self.generate_mr_kernel(rewrite)
+        self.generate_compute_kernel(rewrite)
+        self.generate_mw_kernel(rewrite)
+
+################################################################################
+#
+# Host generation functions
+#
+################################################################################
+
+    def generate_fsource(self, rewrite=False):
+        template = read_template_file(self.app.dest_dir, 'fsource.hpp')
+        filename = path.join(self.app.host_includes_dir, 'fsource.hpp')
+        if not path.isfile(filename) or rewrite:
+            file = open(filename, mode='w+')
+            result = template.render(source=self.app.source)
+            file.write(result)
+            file.close()
+
+    def generate_fsink(self, rewrite=False):
+        template = read_template_file(self.app.dest_dir, 'fsink.hpp')
+        filename = path.join(self.app.host_includes_dir, 'fsink.hpp')
+        if not path.isfile(filename) or rewrite:
+            file = open(filename, mode='w+')
+            result = template.render(sink=self.app.sink)
+            file.write(result)
+            file.close()
+
+    def generate_pipe(self, rewrite=False):
+        nodes = self.app.get_nodes()
+        buffers = []
+        for n in nodes:
+            for b in n.get_global_buffers():
+                buffers.append(b)
+
+        # TODO: avoid to check duplicates in all buffer names.
+        # Do a proper naming for buffers instead
+
+        # Checks duplicate buffer names
+        buffers_set = set()
+        for b in buffers:
+            if b.name in buffers_set:
+                sys.exit("Buffer's name '" + b.name + "'' already taken!")
+            else:
+                buffers_set.add(b.name)
+
+        template = read_template_file(self.app.dest_dir, 'pipe.hpp')
+        filename = path.join(self.app.host_includes_dir, 'pipe.hpp')
+        if not path.isfile(filename) or rewrite:
+            file = open(filename, mode='w+')
+            result = template.render(nodes=self.app.internal_nodes,
+                                     source=self.app.source,
+                                     sink=self.app.sink,
+                                     buffers=buffers,
+                                     transfer_mode=self.app.transfer_mode,
+                                     constants=self.app.constants | self.get_par_constants(),
+                                     transferMode=FTransferMode,
+                                     nodeKind=FOperatorKind,
+                                     bufferAccess=FBufferAccess)
+            file.write(result)
+            file.close()
+
+        self.generate_fsource(rewrite)
+        self.generate_fsink(rewrite)
+
+
+################################################################################
+#
+# User's functions
+#
+################################################################################
+
+    def generate_device(self,
+                        rewrite=False,
+                        rewrite_device=False,
+                        rewrite_functions=False,
+                        rewirte_tuples=False,
+                        rewrite_keyby_lambdas=False):
+        rewrite_device = rewrite or rewrite_device
+        rewrite_functions = rewrite or rewrite_functions
+        rewirte_tuples = rewrite or rewirte_tuples
+        rewrite_any = rewrite or rewrite_device or rewrite_functions or rewirte_tuples
+
+        self.app.finalize()
+        self.prepare_folders()
+
+        self.generate_tuples(rewirte_tuples)
+        self.generate_defines(rewirte_tuples)
+        self.generate_constants(rewrite_any)
+        self.generate_keyby_lambdas(rewrite_keyby_lambdas)
+
+        self.generate_functions(rewrite_functions)
+        self.generate_kernels(rewrite_device)
+        self.generate_makefile(rewrite_any)
+
+    def generate_host(self,
+                      rewrite=False,
+                      rewrite_host=False,
+                      rewrite_pipe=False):
+
+        rewrite_host = rewrite or rewrite_host
+        rewrite_pipe = rewrite or rewrite_pipe
+
+        self.app.finalize()
+        self.prepare_folders()
+
+        self.generate_constants(rewrite)
+        # self.generate_pipe(rewrite_pipe)
+
+        print("generate_host not implemented for Xilinx")
+
+
+        # template_subpath = ("intel" if self.app.target == FTarget.INTEL else "xilinx")
+        # # Copy codebase files (host.cpp, dataset.hpp)
+        # # TODO: formalize which files are copied
+
+        # # HOST.CPP
+        # filename = path.join(self.app.codebase, 'host.cpp')
+        # if path.isfile(filename):
+        #     copyfile(filename, path.join(self.app.host_dir, 'host.cpp'))
+
+        # # DATASET.HPP
+        # filename = path.join(self.app.codebase, 'includes', 'dataset.hpp')
+        # if path.isfile(filename):
+        #     copyfile(filename, path.join(self.app.host_includes_dir, 'dataset.hpp'))
+
+        # template = read_template_file(self.app.dest_dir, 'host.cpp')
+        # filename = path.join(self.app.host_dir, 'host.cpp')
+        # if not path.isfile(filename) or rewrite_host:
+        #     file = open(filename, mode='w+')
+        #     result = template.render(nodes=self.app.internal_nodes,
+        #                              source=self.app.source,
+        #                              sink=self.app.sink,
+        #                              transfer_mode=self.app.transfer_mode,
+        #                              transferMode=FTransferMode)
+        #     file.write(result)
+        #     file.close()
+
+        # # OCL
+        # ocl_dir = os.path.join(os.path.dirname(__file__), "src", template_subpath, 'ocl')
+        # files = ['fbuffers.hpp', 'ocl.hpp', 'opencl.hpp', 'utils.hpp']
+
+        # for f in files:
+        #     src_path = path.join(ocl_dir, f)
+        #     dest_path = path.join(self.app.ocl_dir, f)
+        #     if not path.isfile(dest_path):
+        #         copyfile(src_path, dest_path)
+
+        # # Metric
+        # metric_dir = os.path.join(os.path.dirname(__file__), "src", template_subpath, 'metric')
+        # files = ['metric_group.hpp', 'metric.hpp', 'sampler.hpp']
+
+        # for f in files:
+        #     src_path = path.join(metric_dir, f)
+        #     dest_path = path.join(self.app.host_metric_dir, f)
+        #     if not path.isfile(dest_path):
+        #         copyfile(src_path, dest_path)
+
+        # # Makefile
+        # make_src_dir = os.path.join(os.path.dirname(__file__), "src", template_subpath, 'Makefile')
+        # make_dst_dir = path.join(self.app.base_dir, 'Makefile')
+
+        # if not path.isfile(make_dst_dir):
+        #     copyfile(make_src_dir, make_dst_dir)
+
+    def generate_code(self,
+                      rewrite=False,
+                      rewrite_device=False,
+                      rewrite_functions=False,
+                      rewirte_tuples=False,
+                      rewrite_host=False,
+                      rewrite_pipe=False,
+                      rewrite_keyby_lambdas=False):
+        # self.app.finalize()
+        # self.prepare_folders()
+        # self.generate_device(rewrite, rewrite_device, rewrite_functions, rewirte_tuples)
+        # self.generate_host(rewrite, rewrite_host, rewrite_pipe)
+        sys.exit("generate_code not implemented for Xilinx")

@@ -299,3 +299,48 @@ class FOperator:
         while rng == 0:
             rng = random.randrange(2**32 - 1)
         self.add_private_buffer('rng_state_t', 'rng_' + state_name, ptr=True, value=rng)
+
+# XILINX
+    def get_par_macro(self):
+        return self.name.upper() + '_PAR'
+
+    def get_type_name(self):
+        if self.kind == FOperatorKind.SOURCE:
+            return 'MR'
+        elif self.kind == FOperatorKind.FILTER:
+            return 'Filter'
+        elif self.kind == FOperatorKind.MAP:
+            return 'Map'
+        elif self.kind == FOperatorKind.FLAT_MAP:
+            return 'FlatMap'
+        elif self.kind == FOperatorKind.SINK:
+            return 'MW'
+        elif self.kind == FOperatorKind.GENERATOR:
+            return 'Generator'
+        elif self.kind == FOperatorKind.COLLECTOR:
+            return 'Collector'
+        else:
+            sys.exit('Unknown node kind!')
+
+    def get_keyby_name(self):
+        return self.name + '_keyby'
+
+    def get_gather_name(self):
+        if self.gather_mode == FGatherMode.BLOCKING:
+            return 'RR'
+        elif self.gather_mode == FGatherMode.NON_BLOCKING:
+            return 'LB'
+        else:
+            sys.exit('Unknown gather mode!')
+
+    def get_dispatch_name(self):
+        if self.dispatch_mode == FDispatchMode.RR_BLOCKING:
+            return 'RR'
+        elif self.dispatch_mode == FDispatchMode.RR_NON_BLOCKING:
+            return 'LB'
+        elif self.dispatch_mode == FDispatchMode.KEYBY:
+            return 'KB'
+        elif self.dispatch_mode == FDispatchMode.BROADCAST:
+            return 'BR'
+        else:
+            sys.exit('Unknown dispatch mode!')
