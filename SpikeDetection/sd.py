@@ -32,28 +32,28 @@ precision_char = ('f' if precision_t == 'float' else 'd')
 source_node = FOperator('source',
                     source_par,
                     FOperatorKind.SOURCE,
-                    FGatherMode.NONE,
-                    FDispatchMode.KEYBY)
+                    FGatherPolicy.NONE,
+                    FDispatchPolicy.KB)
 
 avg_node = FOperator('average_calculator',
                  avg_par,
                  FOperatorKind.MAP,
-                 FGatherMode.NON_BLOCKING,
-                 FDispatchMode.RR_BLOCKING,
+                 FGatherPolicy.LB,
+                 FDispatchPolicy.RR,
                  begin_function=True,
                  o_datatype='tuple_t')
 
 spike_node = FOperator('spike_detector',
                    spike_par,
                    FOperatorKind.FILTER,
-                   FGatherMode.NON_BLOCKING,
-                   FDispatchMode.RR_NON_BLOCKING)
+                   FGatherPolicy.LB,
+                   FDispatchPolicy.LB)
 
 sink_node = FOperator('sink',
                   sink_par,
                   FOperatorKind.SINK,
-                  FGatherMode.NON_BLOCKING,
-                  FDispatchMode.NONE)
+                  FGatherPolicy.LB,
+                  FDispatchPolicy.NONE)
 
 win_dim = 16                                       # window size
 max_keys = 64                                      # max n. of keys in total
@@ -82,14 +82,15 @@ pipe_folder = 'sd{}{}{}{:d}{:d}{:d}{:d}'.format(transfer_char,
 
 pipe = FApplication(pipe_folder,
              ('input_t' if benchmark_t == 'throughput' else 'tuple_t'),
+             target = FTarget.INTEL,
              constants=constants,
              transfer_mode=transfer_t,
-             codebase='./codebase')
+             codebase="./codebase")
 pipe.add_source(source_node)
 pipe.add(avg_node)
 pipe.add(spike_node)
 pipe.add_sink(sink_node)
 
-pipe.finalize()
-pipe.generate_device()
+# pipe.finalize()
+pipe.generate_device(rewrite=True)
 pipe.generate_host()

@@ -45,27 +45,27 @@ constants = {'FLOAT_T': precision_t,
 source_node = FOperator('source',
                     source_par,
                     FOperatorKind.SOURCE,
-                    FGatherMode.NONE,
-                    FDispatchMode.KEYBY)
+                    FGatherPolicy.NONE,
+                    FDispatchPolicy.KB)
 
 predictor_node = FOperator('predictor',
                        predictor_par,
                        FOperatorKind.MAP,
-                       FGatherMode.NON_BLOCKING,
-                       FDispatchMode.RR_BLOCKING,
+                       FGatherPolicy.LB,
+                       FDispatchPolicy.RR,
                        o_datatype='tuple_t')
 
 filter_node = FOperator('filter',
                     filter_par,
                     FOperatorKind.FILTER,
-                    FGatherMode.NON_BLOCKING,
-                    FDispatchMode.RR_BLOCKING)
+                    FGatherPolicy.LB,
+                    FDispatchPolicy.RR)
 
 sink_node = FOperator('sink',
                   sink_par,
                   FOperatorKind.SINK,
-                  FGatherMode.NON_BLOCKING,
-                  FDispatchMode.NONE)
+                  FGatherPolicy.LB,
+                  FDispatchPolicy.NONE)
 
 predictor_node.add_global_buffer('unsigned int',
                                  'num_states',

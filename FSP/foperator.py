@@ -2,8 +2,8 @@ import sys
 import random
 from enum import Enum
 
-from .fdispatch import FDispatchMode
-from .fgather import FGatherMode
+from .fdispatch import FDispatchPolicy
+from .fgather import FGatherPolicy
 from .fbuffer import FBufferPrivate, FBufferLocal, FBufferGlobal, FBufferAccess
 
 
@@ -23,8 +23,8 @@ class FOperator:
                  name: str,
                  par: int,
                  kind: FOperatorKind,
-                 gather_mode: FGatherMode,
-                 dispatch_mode: FDispatchMode,
+                 gather_policy: FGatherPolicy,
+                 dispatch_policy: FDispatchPolicy,
                  o_datatype: str = None,
                  channel_depth: int = 0,
                  begin_function: bool = False,
@@ -33,8 +33,8 @@ class FOperator:
         assert name
         assert par > 0
         assert isinstance(kind, FOperatorKind)
-        assert isinstance(gather_mode, FGatherMode)
-        assert isinstance(dispatch_mode, FDispatchMode)
+        assert isinstance(gather_policy, FGatherPolicy)
+        assert isinstance(dispatch_policy, FDispatchPolicy)
         # assert o_datatype or kind is FNodeKind.COLLECTOR
         assert channel_depth >= 0
 
@@ -42,8 +42,8 @@ class FOperator:
         self.name = name
         self.par = par
         self.kind = kind
-        self.gather_mode = gather_mode
-        self.dispatch_mode = dispatch_mode
+        self.gather_policy = gather_policy
+        self.dispatch_policy = dispatch_policy
         self.i_datatype = ''
         self.o_datatype = o_datatype
         self.channel_depth = channel_depth
@@ -172,20 +172,26 @@ class FOperator:
                 + (', ' if param is not None and len(self.get_buffers()) > 0 else '')
                 + self.use_buffers() + ')')
 
-    def is_gather_b(self):
-        return self.gather_mode.is_b()
+    def is_gather_RR(self):
+        return self.gather_policy.is_RR()
 
-    def is_gather_nb(self):
-        return self.gather_mode.is_nb()
+    def is_gather_LB(self):
+        return self.gather_policy.is_LB()
+
+    def is_gather_KB(self):
+        return self.gather_policy.is_KB()
 
     def is_dispatch_RR(self):
-        return self.dispatch_mode.is_RR()
+        return self.dispatch_policy.is_RR()
 
-    def is_dispatch_KEYBY(self):
-        return self.dispatch_mode.is_KEYBY()
+    def is_dispatch_LB(self):
+        return self.dispatch_policy.is_LB()
 
-    def is_dispatch_BROADCAST(self):
-        return self.dispatch_mode.is_BROADCAST()
+    def is_dispatch_KB(self):
+        return self.dispatch_policy.is_KB()
+
+    def is_dispatch_BR(self):
+        return self.dispatch_policy.is_BR()
 
 # FNodeKind
     def is_source(self):
@@ -326,21 +332,23 @@ class FOperator:
         return self.name + '_keyby'
 
     def get_gather_name(self):
-        if self.gather_mode == FGatherMode.BLOCKING:
+        if self.is_gather_RR():
             return 'RR'
-        elif self.gather_mode == FGatherMode.NON_BLOCKING:
+        elif self.is_gather_LB():
             return 'LB'
+        elif self.is_gather_KB():
+            return 'KB'
         else:
-            sys.exit('Unknown gather mode!')
+            sys.exit('Unknown gather policy!')
 
     def get_dispatch_name(self):
-        if self.dispatch_mode == FDispatchMode.RR_BLOCKING:
+        if self.is_dispatch_RR():
             return 'RR'
-        elif self.dispatch_mode == FDispatchMode.RR_NON_BLOCKING:
+        elif self.is_dispatch_LB():
             return 'LB'
-        elif self.dispatch_mode == FDispatchMode.KEYBY:
+        elif self.is_dispatch_KB():
             return 'KB'
-        elif self.dispatch_mode == FDispatchMode.BROADCAST:
+        elif self.is_dispatch_BR():
             return 'BR'
         else:
-            sys.exit('Unknown dispatch mode!')
+            sys.exit('Unknown dispatch policy!')

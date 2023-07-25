@@ -34,7 +34,7 @@ CL_SINGLE_TASK {{ node.kernel_name(idx) }}(const uint size{{ ',' if node.paramet
     {{ node.call_end_function('size') }};
     {% endif %}
 
-    {{ ch.write_broadcast_EOS(node, idx) | indent(8) }}
+    {{ ch.write_br_EOS(node, idx) | indent(8) }}
 }
 
 {%- endmacro %}

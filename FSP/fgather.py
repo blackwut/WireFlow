@@ -1,13 +1,17 @@
 from enum import Enum
 
 
-class FGatherMode(Enum):
+class FGatherPolicy(Enum):
     NONE = 1
-    BLOCKING = 2
-    NON_BLOCKING = 3
+    RR = 2
+    LB = 3
+    KB = 4
 
-    def is_b(self):
-        return self is FGatherMode.BLOCKING
+    def is_RR(self):
+        return self is FGatherPolicy.RR
 
-    def is_nb(self):
-        return self is FGatherMode.NON_BLOCKING
+    def is_LB(self):
+        return self is FGatherPolicy.LB
+
+    def is_KB(self):
+        return self is FGatherPolicy.KB

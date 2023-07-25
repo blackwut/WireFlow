@@ -1,18 +1,21 @@
 from enum import Enum
 
 
-class FDispatchMode(Enum):
+class FDispatchPolicy(Enum):
     NONE = 1
-    RR_BLOCKING = 2
-    RR_NON_BLOCKING = 3
-    KEYBY = 4
-    BROADCAST = 5
+    RR = 2
+    LB = 3
+    KB = 4
+    BR = 5
 
     def is_RR(self):
-        return self in (FDispatchMode.RR_BLOCKING, FDispatchMode.RR_NON_BLOCKING)
+        return self == FDispatchPolicy.RR
 
-    def is_KEYBY(self):
-        return self == FDispatchMode.KEYBY
+    def is_LB(self):
+        return self == FDispatchPolicy.LB
 
-    def is_BROADCAST(self):
-        return self == FDispatchMode.BROADCAST
+    def is_KB(self):
+        return self == FDispatchPolicy.KB
+
+    def is_BR(self):
+        return self == FDispatchPolicy.BR

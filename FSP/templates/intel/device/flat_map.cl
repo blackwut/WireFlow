@@ -38,7 +38,7 @@ CL_SINGLE_TASK {{ node.kernel_name(idx) }}({{ node.parameter_global_buffers() }}
     {{ node.call_end_function() }};
     {% endif %}
 
-    {{ch.write_broadcast_EOS(node, idx)|indent(4)}}
+    {{ch.write_br_EOS(node, idx)|indent(4)}}
 }
 
 {%- endmacro %}

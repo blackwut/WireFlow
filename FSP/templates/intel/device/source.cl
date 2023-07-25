@@ -52,7 +52,7 @@ CL_SINGLE_TASK {{ node.kernel_name(idx) }}(__global volatile header_t * restrict
     {{ node.call_end_function('data, size') }};
     {% endif %}
 
-    {{ ch.write_broadcast_EOS(node, idx) | indent(8) }}
+    {{ ch.write_br_EOS(node, idx) | indent(8) }}
 }
 
 {% else %}
@@ -92,7 +92,7 @@ const uint shutdown)
     {% endif %}
 
     if (shutdown == 1) {
-        {{ ch.write_broadcast_EOS(node, idx) | indent(8) }}
+        {{ ch.write_br_EOS(node, idx) | indent(8) }}
     }
 }
 {% endif %}

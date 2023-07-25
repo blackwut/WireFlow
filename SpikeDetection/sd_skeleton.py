@@ -24,29 +24,29 @@ collector_par = 1
 generator_node = FOperator('generator',
                        generator_par,
                        FOperatorKind.GENERATOR,
-                       FGatherMode.NONE,
-                       FDispatchMode.KEYBY,
+                       FGatherPolicy.NONE,
+                       FDispatchPolicy.KB,
                        channel_depth=16)
 
 avg_node = FOperator('average_calculator',
                  avg_par,
                  FOperatorKind.MAP,
-                 FGatherMode.NON_BLOCKING,
-                 FDispatchMode.RR_BLOCKING,
+                 FGatherPolicy.LB,
+                 FDispatchPolicy.RR,
                  'tuple_t',
                  begin_function=True)
 
 spike_node = FOperator('spike_detector',
                    spike_par,
                    FOperatorKind.FILTER,
-                   FGatherMode.NON_BLOCKING,
-                   FDispatchMode.RR_NON_BLOCKING)
+                   FGatherPolicy.LB,
+                   FDispatchPolicy.LB)
 
 collector_node = FOperator('collector',
                        collector_par,
                        FOperatorKind.COLLECTOR,
-                       FGatherMode.NON_BLOCKING,
-                       FDispatchMode.NONE)
+                       FGatherPolicy.LB,
+                       FDispatchPolicy.NONE)
 
 generator_node.add_rng_state('int')
 generator_node.add_rng_state('float')

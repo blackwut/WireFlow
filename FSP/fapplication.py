@@ -234,6 +234,12 @@ class FGeneratorIntel:
             if not path.isdir(folder):
                 os.mkdir(folder)
 
+    def check_constraints(self):
+        nodes = self.app.get_nodes()
+        for n in nodes:
+            if n.is_gather_KB():
+                sys.exit("KB gather policy is not supported in Intel target")
+
 
 ################################################################################
 #
@@ -328,7 +334,7 @@ class FGeneratorIntel:
                         file = open(filepath, mode='w+')
                         result = template.render(node=n,
                                                  nodeKind=FOperatorKind,
-                                                 dispatchMode=FDispatchMode,
+                                                 dispatchPolicy=FDispatchPolicy,
                                                  transfer_mode=self.app.transfer_mode,
                                                  transferMode=FTransferMode)
                         file.write(result)
@@ -342,7 +348,7 @@ class FGeneratorIntel:
                         file = open(filename, mode='w+')
                         result = template.render(node=n,
                                                  nodeKind=FOperatorKind,
-                                                 dispatchMode=FDispatchMode,
+                                                 dispatchPolicy=FDispatchPolicy,
                                                  transfer_mode=self.app.transfer_mode,
                                                  transferMode=FTransferMode)
                         file.write(result)
@@ -452,6 +458,7 @@ class FGeneratorIntel:
         rewrite_functions = rewrite or rewrite_functions
         rewirte_tuples = rewrite or rewirte_tuples
 
+        self.check_constraints()
         self.app.finalize()
         self.prepare_folders()
 
@@ -476,8 +483,6 @@ class FGeneratorIntel:
 
         template = read_template_file('.', 'device.cl')
         result = template.render(nodeKind=FOperatorKind,
-                                 gatherKind=FGatherMode,
-                                 dispatchKind=FDispatchMode,
                                  nodes=nodes,
                                  channels=self.app.channels,
                                  includes=includes,
