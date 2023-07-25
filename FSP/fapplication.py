@@ -697,8 +697,8 @@ class FGeneratorXilinx:
             file.close()
 
     def generate_functor_for(self, node):
-        template = read_template_file(self.app.dest_dir, 'operator.cpp', 'xilinx')
-        filename = node.name + '.cpp'
+        template = read_template_file(self.app.dest_dir, 'operator.hpp', 'xilinx')
+        filename = node.name + '.hpp'
         filepath = path.join(self.app.device_nodes_dir, filename)
 
         file = open(filepath, mode='w+')
