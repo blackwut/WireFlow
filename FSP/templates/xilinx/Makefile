@@ -71,7 +71,7 @@ BUILD_DIR := $(OUT_DIR)/build
 #
 ################################################################################
 VPP = v++
-VPP_INCLUDES := -I. -Idevice -Icommon -Ioperators -Ituples -I$(FSPX_INCLUDE)
+VPP_INCLUDES := -I$(FSPX_INCLUDE) -I. -Icommon -Idevice -Idevice/includes -Idevice/nodes
 VPP_FLAGS := --platform $(PFM) --target $(TARGET)
 VPP_FLAGS += --debug
 VPP_FLAGS += --save-temps
