@@ -1,6 +1,6 @@
 {%- macro include_tuples(tuples) -%}
 {% for t in tuples %}
-#include "tuples/{{ t }}.hpp"
+#include "{{ t }}.hpp"
 {% endfor %}
 {%- endmacro %}
 
