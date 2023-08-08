@@ -126,7 +126,7 @@ inline void {{ node.function_name() }}(__global const {{ node.i_datatype }} * re
 {% set args = args + node.parameter_buffers_list() %}
 inline {{ node.o_datatype }} {{ node.function_name() }}({{ args | join(', ') }})
 {
-    // apply your source function to 'in' and store result to 'out'
+    // apply your memory_reader function to 'in' and store result to 'out'
     {{ node.o_datatype }} out;
     return out;
 }
