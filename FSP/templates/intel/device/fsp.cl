@@ -16,7 +16,7 @@ __kernel void
 typedef struct __attribute__((aligned(4))) {
     unsigned int received;
     bool EOS[SINK_MAX_EOS];
-} sink_context_t;
+} mw_context_t;
 
 
 typedef union {

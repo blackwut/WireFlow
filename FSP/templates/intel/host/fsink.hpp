@@ -5,6 +5,8 @@
 #include <queue>
 #include <string>
 
+// TODO: rename 'sink' with "MemoryWriter"
+
 #include "../../ocl/ocl.hpp"
 #include "../../ocl/fbuffers.hpp"
 #include "../../ocl/utils.hpp"
@@ -49,7 +51,7 @@ struct FSink
 //     cl_mem b_data;
 //     cl_mem b_received;
 //     cl_mem b_context;
-    
+
 //     FSinkTask(size_t rid, size_t data_size, cl_mem b_context)
 //     , rid(rid)
 //     , data_size(data_size)
@@ -93,7 +95,7 @@ struct FSinkCopy : FSink<T>
 
     std::vector< std::queue<T *> > batches_read_queue;
     std::vector< std::queue<unsigned int *> > received_read_queue;
-    
+
 
     std::vector<size_t> number_of_launches;
     std::vector<size_t> number_of_pop;
@@ -131,7 +133,7 @@ struct FSinkCopy : FSink<T>
                       << batch_size << " -> " << max_batch_size << ")" << std::endl;
         }
 
-        sink_context_t empty_context;
+        mw_context_t empty_context;
         empty_context.received = 0;
         for (size_t i = 0; i < previous_node_par; ++i) {
             empty_context.EOS[i] = false;
@@ -158,10 +160,10 @@ struct FSinkCopy : FSink<T>
                                                   sizeof(unsigned int),
                                                   NULL, &status);
                 clCheckErrorMsg(status, "Failed to create clBuffer (received_mem)");
-        
+
                 contexts[rid] = clCreateBuffer(ocl.context,
                                                CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE,
-                                               sizeof(sink_context_t),
+                                               sizeof(mw_context_t),
                                                &empty_context, &status);
                 clCheckErrorMsg(status, "Failed to create clBuffer (context_mem)");
 
@@ -357,7 +359,7 @@ struct FSinkCopy : FSink<T>
                       << batch_size << " -> " << max_batch_size << ")" << std::endl;
         }
 
-        sink_context_t empty_context;
+        mw_context_t empty_context;
         empty_context.received = 0;
         for (size_t i = 0; i < previous_node_par; ++i) {
             empty_context.EOS[i] = false;
@@ -379,7 +381,7 @@ struct FSinkCopy : FSink<T>
             // contexts
             contexts[rid] = clCreateBuffer(ocl.context,
                                            CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE,
-                                           sizeof(sink_context_t),
+                                           sizeof(mw_context_t),
                                            &empty_context, &status);
             clCheckErrorMsg(status, "Failed to create clBuffer (received_mem)");
             contexts_queues[rid] = ocl.createCommandQueue();
@@ -404,11 +406,11 @@ struct FSinkCopy : FSink<T>
         clCheckError(clEnqueueTask(kernels_queues[rid], kernels[rid], 0, NULL, &kernel_event));
         clFlush(kernels_queues[rid]);
 
-        sink_context_t context;
+        mw_context_t context;
         clCheckError(clEnqueueReadBuffer(contexts_queues[rid],
                                          contexts[rid],
                                          CL_TRUE, 0,
-                                         sizeof(sink_context_t), &context,
+                                         sizeof(mw_context_t), &context,
                                          1, &kernel_event, NULL));
         clFlush(contexts_queues[rid]);
         clCheckError(clReleaseEvent(kernel_event));
@@ -444,11 +446,11 @@ struct FSinkCopy : FSink<T>
         clFlush(kernels_queues[rid]);
 
         cl_event read_events[2];
-        sink_context_t context;
+        mw_context_t context;
         clCheckError(clEnqueueReadBuffer(contexts_queues[rid],
                                          contexts[rid],
                                          CL_FALSE, 0,
-                                         sizeof(sink_context_t), &context,
+                                         sizeof(mw_context_t), &context,
                                          1, &kernel_event, &read_events[0]));
         clFlush(contexts_queues[rid]);
 
@@ -540,7 +542,7 @@ struct FSinkHybrid : FSink<T>
     std::vector<cl_command_queue> kernels_queues;
 
     std::vector< std::vector< clSharedBuffer<T> > > buffers;
-    std::vector< clSharedBuffer<sink_context_t> > contexts;
+    std::vector< clSharedBuffer<mw_context_t> > contexts;
 
 
     FSinkHybrid(OCL & ocl,
@@ -578,7 +580,7 @@ struct FSinkHybrid : FSink<T>
             buffers.push_back(_buffs);
 
             // contexts
-            contexts.push_back(clSharedBuffer<sink_context_t>(ocl, 1, 0, false));
+            contexts.push_back(clSharedBuffer<mw_context_t>(ocl, 1, 0, false));
             contexts[rid].map(CL_MAP_WRITE_INVALIDATE_REGION);
             contexts[rid].ptr()->received = 0;
             for (size_t i = 0; i < previous_node_par; ++i) {
@@ -609,7 +611,7 @@ struct FSinkHybrid : FSink<T>
         clCheckError(clWaitForEvents(1, &kernel_event));
         clCheckError(clReleaseEvent(kernel_event));
 
-        sink_context_t * context = contexts[rid].ptr();
+        mw_context_t * context = contexts[rid].ptr();
         *received = context->received;
 
         // last
