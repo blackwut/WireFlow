@@ -9,13 +9,13 @@ from .fbuffer import FBufferPrivate, FBufferLocal, FBufferGlobal, FBufferAccess
 
 class FOperatorKind(Enum):
     NONE = 1
-    SOURCE = 2
+    MEMORY_READER = 2
     FILTER = 3
     MAP = 4
     FLAT_MAP = 5
-    SINK = 6
+    MEMORY_WRITER = 6
     GENERATOR = 7
-    COLLECTOR = 8
+    DRAINER = 8
 
 
 class FOperator:
@@ -35,7 +35,7 @@ class FOperator:
         assert isinstance(kind, FOperatorKind)
         assert isinstance(gather_policy, FGatherPolicy)
         assert isinstance(dispatch_policy, FDispatchPolicy)
-        # assert o_datatype or kind is FNodeKind.COLLECTOR
+        # assert o_datatype or kind is FNodeKind.DRAINER
         assert channel_depth >= 0
 
         self.id = -1
@@ -48,7 +48,7 @@ class FOperator:
         self.o_datatype = o_datatype
         self.channel_depth = channel_depth
         self.begin_function = begin_function
-        self.compute_function = (kind not in (FOperatorKind.SOURCE, FOperatorKind.SINK, FOperatorKind.COLLECTOR)) or compute_function
+        self.compute_function = (kind not in (FOperatorKind.MEMORY_READER, FOperatorKind.MEMORY_WRITER, FOperatorKind.DRAINER)) or compute_function
         self.end_function = end_function
 
         self.i_channel = None
@@ -194,8 +194,8 @@ class FOperator:
         return self.dispatch_policy.is_BR()
 
 # FNodeKind
-    def is_source(self):
-        return self.kind == FOperatorKind.SOURCE
+    def is_memory_reader(self):
+        return self.kind == FOperatorKind.MEMORY_READER
 
     def is_filter(self):
         return self.kind == FOperatorKind.FILTER
@@ -206,14 +206,14 @@ class FOperator:
     def is_flat_map(self):
         return self.kind == FOperatorKind.FLAT_MAP
 
-    def is_sink(self):
-        return self.kind == FOperatorKind.SINK
+    def is_memory_writer(self):
+        return self.kind == FOperatorKind.MEMORY_WRITER
 
     def is_generator(self):
         return self.kind == FOperatorKind.GENERATOR
 
-    def is_collector(self):
-        return self.kind == FOperatorKind.COLLECTOR
+    def is_drainer(self):
+        return self.kind == FOperatorKind.DRAINER
 
 # Channels
     def read(self, i, j):
@@ -311,7 +311,7 @@ class FOperator:
         return self.name.upper() + '_PAR'
 
     def get_type_name(self):
-        if self.kind == FOperatorKind.SOURCE:
+        if self.kind == FOperatorKind.MEMORY_READER:
             return 'MR'
         elif self.kind == FOperatorKind.FILTER:
             return 'Filter'
@@ -319,11 +319,11 @@ class FOperator:
             return 'Map'
         elif self.kind == FOperatorKind.FLAT_MAP:
             return 'FlatMap'
-        elif self.kind == FOperatorKind.SINK:
+        elif self.kind == FOperatorKind.MEMORY_WRITER:
             return 'MW'
         elif self.kind == FOperatorKind.GENERATOR:
             return 'Generator'
-        elif self.kind == FOperatorKind.COLLECTOR:
+        elif self.kind == FOperatorKind.DRAINER:
             return 'Collector'
         else:
             sys.exit('Unknown node kind!')
