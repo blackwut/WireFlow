@@ -40,20 +40,20 @@ class FApplication:
         self.codebase = codebase
         self.constants = constants
 
-        self.source = None
+        self.memory_reader = None
         self.internal_nodes = []
-        self.sink = None
+        self.memory_writer = None
 
         self.intel_generator = FGeneratorIntel(self)
         self.xilinx_generator = FGeneratorXilinx(self)
 
     def get_nodes(self):
         nodes = []
-        if self.source:
-            nodes.append(self.source)
+        if self.memory_reader:
+            nodes.append(self.memory_reader)
         nodes.extend(self.internal_nodes)
-        if self.sink:
-            nodes.append(self.sink)
+        if self.memory_writer:
+            nodes.append(self.memory_writer)
         return nodes
 
     def generate_host(self,
@@ -124,34 +124,51 @@ class FApplication:
 #
 ################################################################################
 
-    def add_source(self,
-                   source: FOperator):
-        assert source
-        assert not self.source
-
-        if source.kind == FOperatorKind.SOURCE:
-            self.source = source
-        else:
-            sys.exit("Supplied node is not of type SOURCE")
-
-    def add_sink(self,
-                 sink: FOperator):
-        assert sink
-        assert not self.sink
-
-        if sink.kind == FOperatorKind.SINK:
-            self.sink = sink
-        else:
-            sys.exit("Supplied node is not of type SINK")
-
     def add(self,
             node: FOperator):
         assert node
 
-        if node.kind not in (FOperatorKind.SOURCE, FOperatorKind.SINK):
+        if node.is_memory_reader():
+            if self.memory_reader:
+                sys.exit("Memory reader already present!")
+            self.memory_reader = node
+
+        elif node.is_memory_writer():
+            if self.memory_writer:
+                sys.exit("Memory writer already present!")
+            self.memory_writer = node
+
+        elif node.is_generator():
+            flag = False
+            for n in self.internal_nodes:
+                if n.is_generator():
+                    flag = True
+                    break
+            if flag:
+                sys.exit("Generator already present!")
+            self.internal_nodes.insert(0, node)
+        elif node.is_drainer():
+            flag = False
+            for n in self.internal_nodes:
+                if n.is_drainer():
+                    flag = True
+                    break
+            if flag:
+                sys.exit("Drainer already present!")
             self.internal_nodes.append(node)
+
+        elif node.kind in (FOperatorKind.MAP, FOperatorKind.FILTER, FOperatorKind.FLAT_MAP):
+            flag = False
+            for n in self.internal_nodes:
+                if n.is_drainer():
+                    flag = True
+                    break
+            if flag:
+                self.internal_nodes.insert(-1, node)
+            else:
+                self.internal_nodes.append(node)
         else:
-            sys.exit("Supplied node is not of type MAP, FILTER, FLAT_MAP, GENERATOR, or COLLECTOR")
+            sys.exit("Supplied node is not of type MEMORY_READER, MAP, FILTER, FLAT_MAP, MEMORY_WRITER, GENERATOR, or DRAINER")
 
     def finalize(self):
         nodes = self.get_nodes()
@@ -276,9 +293,9 @@ class FGeneratorIntel:
         if path.isfile(filepath) and not rewrite:
             return
 
-        # nodes = [self.app.source]
+        # nodes = [self.app.memory_reader]
         # nodes.extend(self.app.internal_nodes)
-        # nodes.append(self.app.sink)
+        # nodes.append(self.app.memory_writer)
 
         # Gathers all unique datatype
         tuples = set()
@@ -367,7 +384,7 @@ class FGeneratorIntel:
 
         template = read_template_file(self.app.dest_dir, 'fsp.cl')
         file = open(filepath, mode='w+')
-        result = template.render(sink=self.app.sink)
+        result = template.render(sink=self.app.memory_writer)
         file.write(result)
         file.close()
 
@@ -387,21 +404,21 @@ class FGeneratorIntel:
 #
 ################################################################################
 
-    def generate_fsource(self, rewrite=False):
+    def generate_memory_reader(self, rewrite=False):
         template = read_template_file(self.app.dest_dir, 'fsource.hpp')
         filename = path.join(self.app.host_includes_dir, 'fsource.hpp')
         if not path.isfile(filename) or rewrite:
             file = open(filename, mode='w+')
-            result = template.render(source=self.app.source)
+            result = template.render(source=self.app.memory_reader)
             file.write(result)
             file.close()
 
-    def generate_fsink(self, rewrite=False):
+    def generate_memory_writer(self, rewrite=False):
         template = read_template_file(self.app.dest_dir, 'fsink.hpp')
         filename = path.join(self.app.host_includes_dir, 'fsink.hpp')
         if not path.isfile(filename) or rewrite:
             file = open(filename, mode='w+')
-            result = template.render(sink=self.app.sink)
+            result = template.render(sink=self.app.memory_writer)
             file.write(result)
             file.close()
 
@@ -428,8 +445,8 @@ class FGeneratorIntel:
         if not path.isfile(filename) or rewrite:
             file = open(filename, mode='w+')
             result = template.render(nodes=self.app.internal_nodes,
-                                     source=self.app.source,
-                                     sink=self.app.sink,
+                                     source=self.app.memory_reader,
+                                     sink=self.app.memory_writer,
                                      buffers=buffers,
                                      transfer_mode=self.app.transfer_mode,
                                      constants=self.app.constants | self.get_par_constants(),
@@ -439,8 +456,8 @@ class FGeneratorIntel:
             file.write(result)
             file.close()
 
-        self.generate_fsource(rewrite)
-        self.generate_fsink(rewrite)
+        self.generate_memory_reader(rewrite)
+        self.generate_memory_writer(rewrite)
 
 
 ################################################################################
@@ -537,8 +554,8 @@ class FGeneratorIntel:
         if not path.isfile(filename) or rewrite_host:
             file = open(filename, mode='w+')
             result = template.render(nodes=self.app.internal_nodes,
-                                     source=self.app.source,
-                                     sink=self.app.sink,
+                                     source=self.app.memory_reader,
+                                     sink=self.app.memory_writer,
                                      transfer_mode=self.app.transfer_mode,
                                      transferMode=FTransferMode)
             file.write(result)
@@ -608,8 +625,8 @@ class FGeneratorXilinx:
         │   └── includes
         │   └── nodes
         └── host
-            └── includes
-            └── metric
+            └── includes (unused)
+            └── metric   (unused)
         """
         self.app.base_dir = self.app.dest_dir
         self.app.common_dir = path.join(self.app.base_dir, 'common')
@@ -629,6 +646,15 @@ class FGeneratorXilinx:
                        self.app.host_dir, self.app.host_includes_dir, self.app.host_metric_dir):
             if not path.isdir(folder):
                 os.mkdir(folder)
+
+    def check_constraints(self):
+        nodes = self.app.get_nodes()
+        for n in nodes:
+            if n.has_begin_function() or n.has_end_function():
+                print(n.name + ": begin function is not generated for Xilinx target")
+            if n.is_memory_reader() or n.is_memory_writer():
+                if n.has_compute_function():
+                    print(n.name + ": compute function is not generated for Xilinx target")
 
 
 ################################################################################
@@ -685,7 +711,6 @@ class FGeneratorXilinx:
             filename = tuple + '.hpp'
             filepath = path.join(self.app.common_dir, filename)
             # do not generate tuples if they are already present in codebase folder
-            # tuples.h from codebase is copied into the includes folder
             if self.app.codebase:
                 codebase_filepath = path.join(self.app.codebase, 'includes', filename)
                 if path.isfile(codebase_filepath):
@@ -737,8 +762,8 @@ class FGeneratorXilinx:
         if not path.isfile(filepath) or rewrite:
             file = open(filepath, mode='w+')
             result = template.render(operators=self.app.get_nodes(),
-                                     mr=self.app.source,
-                                     mw=self.app.sink)
+                                     mr=self.app.memory_reader,
+                                     mw=self.app.memory_writer)
             file.write(result)
             file.close()
 
@@ -754,12 +779,10 @@ class FGeneratorXilinx:
         filename = path.join(self.app.device_includes_dir, 'defines.hpp')
 
         if not path.isfile(filename) or rewrite:
-            tuples = self.get_tuples()
             file = open(filename, mode='w+')
-            result = template.render(tuples=tuples,
-                                     mr=self.app.source,
-                                     mw=self.app.sink,
-                                     datatypes=self.get_tuples())
+            result = template.render(tuples=self.get_tuples(),
+                                     mr=self.app.memory_reader,
+                                     mw=self.app.memory_writer)
             file.write(result)
             file.close()
 
@@ -779,8 +802,8 @@ class FGeneratorXilinx:
             file = open(filename, mode='w+')
             result = template.render(operators=self.app.internal_nodes,
                                      nodes=self.app.get_nodes(),
-                                     mr=self.app.source,
-                                     mw=self.app.sink)
+                                     mr=self.app.memory_reader,
+                                     mw=self.app.memory_writer)
             file.write(result)
             file.close()
 
@@ -804,60 +827,16 @@ class FGeneratorXilinx:
 #
 ################################################################################
 
-    def generate_fsource(self, rewrite=False):
-        template = read_template_file(self.app.dest_dir, 'fsource.hpp')
-        filename = path.join(self.app.host_includes_dir, 'fsource.hpp')
+    def generate_main(self, rewrite=False):
+        template = read_template_file(self.app.dest_dir, 'host.cpp', 'xilinx')
+        filename = path.join(self.app.host_dir, 'host.cpp')
         if not path.isfile(filename) or rewrite:
             file = open(filename, mode='w+')
-            result = template.render(source=self.app.source)
+            result = template.render(tuples=self.get_tuples(),
+                                     mr=self.app.memory_reader,
+                                     mw=self.app.memory_writer)
             file.write(result)
             file.close()
-
-    def generate_fsink(self, rewrite=False):
-        template = read_template_file(self.app.dest_dir, 'fsink.hpp')
-        filename = path.join(self.app.host_includes_dir, 'fsink.hpp')
-        if not path.isfile(filename) or rewrite:
-            file = open(filename, mode='w+')
-            result = template.render(sink=self.app.sink)
-            file.write(result)
-            file.close()
-
-    def generate_pipe(self, rewrite=False):
-        nodes = self.app.get_nodes()
-        buffers = []
-        for n in nodes:
-            for b in n.get_global_buffers():
-                buffers.append(b)
-
-        # TODO: avoid to check duplicates in all buffer names.
-        # Do a proper naming for buffers instead
-
-        # Checks duplicate buffer names
-        buffers_set = set()
-        for b in buffers:
-            if b.name in buffers_set:
-                sys.exit("Buffer's name '" + b.name + "'' already taken!")
-            else:
-                buffers_set.add(b.name)
-
-        template = read_template_file(self.app.dest_dir, 'pipe.hpp')
-        filename = path.join(self.app.host_includes_dir, 'pipe.hpp')
-        if not path.isfile(filename) or rewrite:
-            file = open(filename, mode='w+')
-            result = template.render(nodes=self.app.internal_nodes,
-                                     source=self.app.source,
-                                     sink=self.app.sink,
-                                     buffers=buffers,
-                                     transfer_mode=self.app.transfer_mode,
-                                     constants=self.app.constants | self.get_par_constants(),
-                                     transferMode=FTransferMode,
-                                     nodeKind=FOperatorKind,
-                                     bufferAccess=FBufferAccess)
-            file.write(result)
-            file.close()
-
-        self.generate_fsource(rewrite)
-        self.generate_fsink(rewrite)
 
 
 ################################################################################
@@ -877,6 +856,7 @@ class FGeneratorXilinx:
         rewirte_tuples = rewrite or rewirte_tuples
         rewrite_any = rewrite or rewrite_device or rewrite_functions or rewirte_tuples
 
+        self.check_constraints()
         self.app.finalize()
         self.prepare_folders()
 
@@ -901,63 +881,7 @@ class FGeneratorXilinx:
         self.prepare_folders()
 
         self.generate_constants(rewrite)
-        # self.generate_pipe(rewrite_pipe)
-
-        print("generate_host not implemented for Xilinx")
-
-
-        # template_subpath = ("intel" if self.app.target == FTarget.INTEL else "xilinx")
-        # # Copy codebase files (host.cpp, dataset.hpp)
-        # # TODO: formalize which files are copied
-
-        # # HOST.CPP
-        # filename = path.join(self.app.codebase, 'host.cpp')
-        # if path.isfile(filename):
-        #     copyfile(filename, path.join(self.app.host_dir, 'host.cpp'))
-
-        # # DATASET.HPP
-        # filename = path.join(self.app.codebase, 'includes', 'dataset.hpp')
-        # if path.isfile(filename):
-        #     copyfile(filename, path.join(self.app.host_includes_dir, 'dataset.hpp'))
-
-        # template = read_template_file(self.app.dest_dir, 'host.cpp')
-        # filename = path.join(self.app.host_dir, 'host.cpp')
-        # if not path.isfile(filename) or rewrite_host:
-        #     file = open(filename, mode='w+')
-        #     result = template.render(nodes=self.app.internal_nodes,
-        #                              source=self.app.source,
-        #                              sink=self.app.sink,
-        #                              transfer_mode=self.app.transfer_mode,
-        #                              transferMode=FTransferMode)
-        #     file.write(result)
-        #     file.close()
-
-        # # OCL
-        # ocl_dir = os.path.join(os.path.dirname(__file__), "src", template_subpath, 'ocl')
-        # files = ['fbuffers.hpp', 'ocl.hpp', 'opencl.hpp', 'utils.hpp']
-
-        # for f in files:
-        #     src_path = path.join(ocl_dir, f)
-        #     dest_path = path.join(self.app.ocl_dir, f)
-        #     if not path.isfile(dest_path):
-        #         copyfile(src_path, dest_path)
-
-        # # Metric
-        # metric_dir = os.path.join(os.path.dirname(__file__), "src", template_subpath, 'metric')
-        # files = ['metric_group.hpp', 'metric.hpp', 'sampler.hpp']
-
-        # for f in files:
-        #     src_path = path.join(metric_dir, f)
-        #     dest_path = path.join(self.app.host_metric_dir, f)
-        #     if not path.isfile(dest_path):
-        #         copyfile(src_path, dest_path)
-
-        # # Makefile
-        # make_src_dir = os.path.join(os.path.dirname(__file__), "src", template_subpath, 'Makefile')
-        # make_dst_dir = path.join(self.app.base_dir, 'Makefile')
-
-        # if not path.isfile(make_dst_dir):
-        #     copyfile(make_src_dir, make_dst_dir)
+        self.generate_main(rewrite_host)
 
     def generate_code(self,
                       rewrite=False,
@@ -967,8 +891,5 @@ class FGeneratorXilinx:
                       rewrite_host=False,
                       rewrite_pipe=False,
                       rewrite_keyby_lambdas=False):
-        # self.app.finalize()
-        # self.prepare_folders()
-        # self.generate_device(rewrite, rewrite_device, rewrite_functions, rewirte_tuples)
-        # self.generate_host(rewrite, rewrite_host, rewrite_pipe)
-        sys.exit("generate_code not implemented for Xilinx")
+        self.generate_device(rewrite, rewrite_device, rewrite_functions, rewirte_tuples, rewrite_keyby_lambdas)
+        self.generate_host(rewrite, rewrite_host, rewrite_pipe)
