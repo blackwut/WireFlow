@@ -1,11 +1,11 @@
-{%-macro keyby_lambda(op, next_op) %}
-auto {{op.get_keyby_name()}} = [](const {{op.o_datatype}} & r) {
-    return (int)(r.key % {{next_op.get_par_macro()}});
+{%-macro keyby_lambda(op) %}
+auto {{op.get_keyby_lambda_name()}} = [](const {{op.o_datatype}} & r) {
+    return (int)(r.key);
 };
 {%- endmacro %}
 
 {% for op in nodes %}
 {% if op.is_dispatch_KB() %}
-{{keyby_lambda(op, next_nodes[loop.index])}}
+{{keyby_lambda(op)}}
 {% endif %}
 {% endfor %}

@@ -697,7 +697,7 @@ class FGeneratorXilinx:
         filepath = path.join(self.app.device_includes_dir, filename)
         if not path.isfile(filepath) or rewrite:
             file = open(filepath, mode='w+')
-            result = template.render(nodes=self.app.get_nodes()[:-1], next_nodes=self.app.get_nodes()[1:])
+            result = template.render(nodes=self.app.get_nodes())
             file.write(result)
             file.close()
 
@@ -715,7 +715,7 @@ class FGeneratorXilinx:
                 codebase_filepath = path.join(self.app.codebase, 'includes', filename)
                 if path.isfile(codebase_filepath):
                     copyfile(codebase_filepath, filepath)
-                    return
+                    continue
 
             # do not generate tuples if are already present or rewrite is false
             if path.isfile(filepath) and not rewrite:
@@ -741,7 +741,7 @@ class FGeneratorXilinx:
 
         for node in self.app.internal_nodes:
             is_generated = False
-            filename = node.name + '.cpp'
+            filename = node.name + '.hpp'
             filepath = path.join(self.app.device_nodes_dir, filename)
 
             if self.app.codebase:
@@ -854,6 +854,7 @@ class FGeneratorXilinx:
         rewrite_device = rewrite or rewrite_device
         rewrite_functions = rewrite or rewrite_functions
         rewirte_tuples = rewrite or rewirte_tuples
+        rewrite_keyby_lambdas = rewrite or rewrite_keyby_lambdas
         rewrite_any = rewrite or rewrite_device or rewrite_functions or rewirte_tuples
 
         self.check_constraints()

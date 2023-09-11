@@ -34,7 +34,11 @@ class FOperator:
         assert par > 0
         assert isinstance(kind, FOperatorKind)
         assert isinstance(gather_policy, FGatherPolicy)
+        assert kind is FOperatorKind.MEMORY_READER \
+            and gather_policy is FGatherPolicy.NONE
         assert isinstance(dispatch_policy, FDispatchPolicy)
+        assert kind is FOperatorKind.MEMORY_WRITER \
+            and dispatch_policy is FDispatchPolicy.NONE
         # assert o_datatype or kind is FNodeKind.DRAINER
         assert channel_depth >= 0
 
@@ -328,7 +332,7 @@ class FOperator:
         else:
             sys.exit('Unknown node kind!')
 
-    def get_keyby_name(self):
+    def get_keyby_lambda_name(self):
         return self.name + '_keyby'
 
     def get_gather_name(self):
