@@ -62,7 +62,7 @@ inline void {{ node.begin_function_name() }}()
 {% set args = args + node.parameter_buffers_list() %}
 inline void {{ node.function_name() }}({{ args | join(', ') }})
 {
-    // apply your collector function to 'in'
+    // apply your drainer function to 'in'
 }
 #}
 {%- endmacro %}

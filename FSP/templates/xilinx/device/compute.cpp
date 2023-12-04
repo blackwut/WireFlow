@@ -6,13 +6,13 @@
 
 {%- macro a2a_emitter(left, right) %}
 fx::A2A::Emitter<fx::A2A::Policy_t::{{left.get_dispatch_name()}}, {{left.get_par_macro()}}, {{right.get_par_macro()}}>(
-    in, {{left.name}}_{{right.name}}{{", " + left.get_keyby_name() if left.is_dispatch_KB() else ""}}
+    in, {{left.name}}_{{right.name}}{{", " + left.get_keyby_lambda_name() if left.is_dispatch_KB() else ""}}
 );
 {%- endmacro %}
 
 {%- macro a2a_operator(left, mid, right) %}
 fx::A2A::Operator<fx::A2A::Operator_t::{{mid.get_type_name() | upper}}, {{mid.name}}, fx::A2A::Policy_t::{{mid.get_gather_name()}}, fx::A2A::Policy_t::{{mid.get_dispatch_name()}}, {{left.get_par_macro()}}, {{mid.get_par_macro()}}, {{right.get_par_macro()}}>(
-    {{left.name}}_{{mid.name}}, {{mid.name}}_{{right.name}}{{", " + mid.get_keyby_name() if mid.is_dispatch_KB() else ""}}
+    {{left.name}}_{{mid.name}}, {{mid.name}}_{{right.name}}{{", " + mid.get_keyby_lambda_name() if mid.is_dispatch_KB() else ""}}
 );
 {%- endmacro %}
 
