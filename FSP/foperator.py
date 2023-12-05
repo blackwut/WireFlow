@@ -34,13 +34,14 @@ class FOperator:
         assert par > 0
         assert isinstance(kind, FOperatorKind)
         assert isinstance(gather_policy, FGatherPolicy)
-        assert kind is FOperatorKind.MEMORY_READER \
-            and gather_policy is FGatherPolicy.NONE
         assert isinstance(dispatch_policy, FDispatchPolicy)
-        assert kind is FOperatorKind.MEMORY_WRITER \
-            and dispatch_policy is FDispatchPolicy.NONE
         # assert o_datatype or kind is FNodeKind.DRAINER
         assert channel_depth >= 0
+
+        if kind is FOperatorKind.MEMORY_READER:
+            assert gather_policy is FGatherPolicy.NONE
+        if kind is FOperatorKind.MEMORY_WRITER:
+            assert dispatch_policy is FDispatchPolicy.NONE
 
         self.id = -1
         self.name = name

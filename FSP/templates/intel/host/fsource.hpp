@@ -6,6 +6,8 @@
 #include <string>
 #include <chrono>
 
+// TODO: rename 'source' with "MemoryReader"
+
 #include "../../ocl/ocl.hpp"
 #include "../../ocl/fbuffers.hpp"
 #include "../../ocl/utils.hpp"

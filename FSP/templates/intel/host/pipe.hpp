@@ -9,6 +9,8 @@
 #include "../common/tuples.h"
 #include "../device/includes/fsp.cl"
 
+// TODO: rename 'source' with 'MemoryReader' and 'sink' with 'MemoryWriter'
+
 #include "fsource.hpp"
 #include "fsink.hpp"
 

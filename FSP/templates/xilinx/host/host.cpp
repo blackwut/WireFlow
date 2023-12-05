@@ -32,23 +32,37 @@ template <typename T>
 void mr_thread(
     const size_t idx,
     fx::OCL & ocl,
-    const std::vector<T> & dataset,
+    const std::vector<T, fx::aligned_allocator<T> > & dataset,
     const size_t iterations,
     const size_t num_batches,
     const size_t batch_size
 )
 {
-    fx::MemoryReader<T> mr(ocl, batch_size, num_batches, idx + 1);
+    fx::MemoryReader<T> mr(ocl, batch_size, num_batches, idx);
     size_t _tuples_sent = 0;
     size_t _batch_sent = 0;
 
     pthread_barrier_wait(&barrier);
 
     for (size_t it = 0; it < iterations; ++it) {
-        T * batch = mr.get_batch();
-        fx::fill_batch_with_dataset(dataset, batch, batch_size);
+        // T * batch = mr.get_batch();
+        // fx::fill_batch_with_dataset<T>(dataset, batch, batch_size);
 
-        mr.push(batch, batch_size, (it == (iterations - 1)));
+        // mr.push(batch, batch_size, (it == (iterations - 1)));
+        // _tuples_sent += batch_size;
+        // _batch_sent++;
+
+        const bool last_batch = it == (iterations - 1);
+        size_t idx = tuples_sent % dataset.size();
+        for (size_t i = 0; i < batch_size; ++i) {
+            const bool last = last_batch && i == (batch_size - 1);
+            mr.push(dataset[idx], last);
+
+            idx++;
+            if (idx == dataset.size()) {
+                idx = 0;
+            }
+        }
         _tuples_sent += batch_size;
         _batch_sent++;
     }
@@ -67,7 +81,7 @@ void mw_thread(
     const size_t batch_size
 )
 {
-    fx::MemoryWriter<T> mw(ocl, batch_size, num_batches, idx + 1);
+    fx::MemoryWriter<T> mw(ocl, batch_size, num_batches, idx);
     size_t _tuples_received = 0;
     size_t _batch_received = 0;
 
@@ -129,7 +143,7 @@ int main(int argc, char** argv) {
         << '\n';
 
 
-    std::vector<std::vector<{{mr.o_datatype}}>> datasets;
+    std::vector<std::vector<{{mr.o_datatype}}, fx::aligned_allocator<{{mr.o_datatype}}> >> datasets;
     for (size_t i = 0; i < mr_num_threads; ++i) {
         // TODO: generate or load dataset for each mr thread
         datasets.push_back(...);

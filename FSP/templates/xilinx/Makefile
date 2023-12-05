@@ -16,7 +16,7 @@
 {%-endfor %}
 {%- endmacro %}
 # INPUTS
-KERNEL_NAME ?= sd
+KERNEL_NAME ?= {{app_name}}
 {{define_par(operators)}}
 
 ################################################################################
@@ -141,21 +141,21 @@ CXX = g++
 CXX_FLAGS = -std=c++17
 CXX_FLAGS += -Wall -Wextra -fmessage-length=0 -Wno-unknown-pragmas -Wno-unused-label -Wno-unused-variable -Wno-unused-function -Wno-unused-but-set-variable
 CXX_FLAGS += -g
-CXX_FLAGS += -O3
+CXX_FLAGS += -O3 -DNDEBUG -finline-functions  -DWF_RELEASE
 # CXX_FLAGS += -fsanitize=address
 # CXX_FLAGS += -fsanitize=thread
 # CXX_FLAGS += -fno-omit-frame-pointer -fsanitize-address-use-after-scope -fsanitize=undefined -fno-sanitize-recover=all -fstack-protector -fstack-clash-protection -fPIE -pie -Wl,-z,relro,-z,now -Wl,-z,noexecstack -Wl,-z,defs -Wl,-z,combreloc
 CXX_LDFLAGS = -L$(XRT_LIB) -L$(XRT_LIB_O) $(CXX_LIBS)
-CXX_INCLUDES = -Icommon -Ioperators -Ituples -I$(FSPX_INCLUDE) -I$(VIVADO_INCLUDE) -I$(XRT_INCLUDE) -I$(VITIS_INCLUDE)
+CXX_INCLUDES = -Icommon -Ihost/includes -I$(FSPX_INCLUDE) -I$(VIVADO_INCLUDE) -I$(XRT_INCLUDE) -I$(VITIS_INCLUDE)
 
-
-host: main.cpp
-	mkdir -p bin
-	$(CXX) $(CXX_FLAGS) $(CXX_INCLUDES) -o bin/main $< $(CXX_LDFLAGS)
 
 emconfig:emconfig.json
 emconfig.json:
 	emconfigutil --platform $(PLATFORM)
+
+main: host/host.cpp
+	mkdir -p bin
+	$(CXX) $(CXX_FLAGS) $(CXX_INCLUDES) -o bin/host $< $(CXX_LDFLAGS)
 
 $(MEMORY_READER_XO): $(MEMORY_READER_CPP)
 	$(VPP) --kernel $(MEMORY_READER_KERNEL_NAME) $(VPP_FLAGS) $(VPP_INCLUDES) $(MR_COMPILE_FLAGS) -c -o $@ $<
@@ -179,4 +179,4 @@ clean:
 	$(RM) -rf _x .run .Xil *.ltx *.log *.info *compile_summary* vitis_analyzer* *link_summary* *.o main
 
 cleanall:
-	$(RM) -rf sd_host *.o *.xo _x .run .Xil *.xclbin *.ltx *.log *.info *compile_summary* vitis_analyzer* *link_summary* *.o main emconfig.json device_trace_0.csv *.xclbin.package_summary opencl_trace.csv xrt.run_summary summary.csv .ipcache waveform_prefs.json
+	$(RM) -rf main *.o *.xo _x .run .Xil *.xclbin *.ltx *.log *.info *compile_summary* vitis_analyzer* *link_summary* *.o emconfig.json device_trace_0.csv *.xclbin.package_summary opencl_trace.csv xrt.run_summary summary.csv .ipcache waveform_prefs.json
