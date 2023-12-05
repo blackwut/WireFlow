@@ -21,8 +21,10 @@ avg_par = 1
 spike_par = 1
 mw_par = 1
 
+target_t = FTarget.XILINX           # XILINX or INTEL
+codebase_t = ('./xilinx' if target_t == FTarget.XILINX else './intel')
 transfer_t = FTransferMode.COPY     # COPY, HYBRID or SHARED
-benchmark_t = 'throughput'          # latency or throughput
+benchmark_t = 'latency'             # latency or throughput
 precision_t = 'float'               # float or double
 in_datatype_t = ('input_t' if benchmark_t == 'throughput' else 'tuple_t')
 
@@ -73,24 +75,25 @@ avg_node.add_local_buffer(precision_t,
                           'windows',
                           size=(avg_keys, win_dim))
 
-pipe_folder = 'sd{}{}{}{:d}{:d}{:d}{:d}'.format(transfer_char,
-                                                benchmark_char,
-                                                precision_char,
-                                                mr_par,
-                                                avg_par,
-                                                spike_par,
-                                                mw_par)
+# pipe_folder = 'sd{}{}{}{:d}{:d}{:d}{:d}'.format(transfer_char,
+#                                                 benchmark_char,
+#                                                 precision_char,
+#                                                 mr_par,
+#                                                 avg_par,
+#                                                 spike_par,
+#                                                 mw_par)
+pipe_folder = 'sd'
 
 pipe = FApplication(pipe_folder,
                     in_datatype_t,
-                    target = FTarget.XILINX,
+                    target = target_t,
                     constants=constants,
                     transfer_mode=transfer_t,
-                    codebase="./codebase")
+                    codebase=codebase_t)
 pipe.add(mr_node)
 pipe.add(avg_node)
 pipe.add(spike_node)
 pipe.add(mw_node)
 
-pipe.generate_device(rewrite=True)
+pipe.generate_device()
 pipe.generate_host()
