@@ -9,6 +9,7 @@
 
 void dump_benchmark(
     std::string filename,
+    std::string appname,
     std::string bitstream,
     std::vector<std::string> operator_names,
     std::vector<size_t> operator_parallelisms,
@@ -75,7 +76,7 @@ void dump_benchmark(
 
     auto latency_metric = fx::metric_group.get_metric("latency");
 
-    outfile << "SpikeDetection" << ","
+    outfile << appname << ","
             << bitstream << ",";
 
     for (auto par : operator_parallelisms) {

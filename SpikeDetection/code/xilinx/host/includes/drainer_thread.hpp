@@ -21,14 +21,15 @@ void stream_drainer_thread(
     fx::OCL & ocl,
     const size_t num_batches,
     const size_t batch_size,
-    const uint64_t & app_start_time
+    const uint64_t & app_start_time,
+    const size_t sampling_rate
 )
 {
     fx::StreamDrainer<T> stream_drainer(ocl, batch_size, num_batches, idx);
     size_t _tuples_received = 0;
     size_t _batch_received = 0;
 
-    fx::Sampler latency_sampler(1024);
+    fx::Sampler latency_sampler(sampling_rate);
 
     stream_drainer.prelaunch();
     pthread_barrier_wait(&barrier_setup);

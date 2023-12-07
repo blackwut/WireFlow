@@ -1,4 +1,3 @@
-
 #include <iostream>
 #include <vector>
 #include <atomic>
@@ -112,7 +111,8 @@ int main(int argc, char** argv) {
                 std::ref(ocl),
                 drainer_num_buffers,
                 drainer_batch_size,
-                std::ref(app_start_time)
+                std::ref(app_start_time),
+                sampling_rate
             )
         );
     }
@@ -149,6 +149,7 @@ int main(int argc, char** argv) {
     // dump benchmark results
     dump_benchmark(
         "results.csv",
+        "SpikeDetection",
         bitstream,
         {"MemoryReader", "AverageCalculator", "SpikeDetector", "MemoryWriter"},
         {generator_num_threads, generator_num_threads, generator_num_threads, drainer_num_threads},
