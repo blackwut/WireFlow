@@ -157,12 +157,13 @@ endif
 CXX_LDFLAGS = -L$(XRT_LIB) -L$(XRT_LIB_O) $(CXX_LIBS)
 CXX_INCLUDES = -Icommon -Ihost/includes -I$(FSPX_INCLUDE) -I$(VIVADO_INCLUDE) -I$(XRT_INCLUDE) -I$(VITIS_INCLUDE)
 
+.PHONY: all clean cleanall emconfig bitstream host
 
 emconfig:emconfig.json
 emconfig.json:
 	emconfigutil --platform $(PLATFORM)
 
-main: host/host.cpp
+host: host/host.cpp
 	mkdir -p bin
 	$(CXX) $(CXX_FLAGS) $(CXX_INCLUDES) -o bin/host $< $(CXX_LDFLAGS)
 
@@ -185,7 +186,7 @@ bitstream: $(KERNEL_LINK_XCLBIN)
 all: emconfig $(KERNEL_XCLBIN) host
 
 clean:
-	$(RM) -rf _x .run .Xil *.ltx *.log *.info *compile_summary* vitis_analyzer* *link_summary* *.o main
+	$(RM) -rf _x .run .Xil *.ltx *.log *.info *compile_summary* vitis_analyzer* *link_summary* *.o host
 
 cleanall:
-	$(RM) -rf main *.o *.xo _x .run .Xil *.xclbin *.ltx *.log *.info *compile_summary* vitis_analyzer* *link_summary* *.o emconfig.json device_trace_0.csv *.xclbin.package_summary opencl_trace.csv xrt.run_summary summary.csv .ipcache waveform_prefs.json
+	$(RM) -rf host *.o *.xo _x .run .Xil *.xclbin *.ltx *.log *.info *compile_summary* vitis_analyzer* *link_summary* *.o emconfig.json device_trace_0.csv *.xclbin.package_summary opencl_trace.csv xrt.run_summary summary.csv .ipcache waveform_prefs.json
