@@ -1,8 +1,15 @@
 {%- macro include_tuples(tuples) -%}
 {% for t in tuples %}
+<<<<<<< HEAD
 #include "../common/{{ t }}.hpp"
 {% endfor %}
 {%- endmacro %}
+=======
+#include "{{ t }}.hpp"
+{% endfor %}
+{%- endmacro %}
+
+>>>>>>> 8773af2059839c905137bd3df9916b2dab11bea1
 #include <iostream>
 #include <vector>
 #include <atomic>
@@ -15,6 +22,7 @@
 
 
 #include "fspx_host.hpp"
+<<<<<<< HEAD
 #include "../common/constants.hpp"
 {{include_tuples(tuples)}}
 
@@ -72,6 +80,60 @@ void stream_generator_thread(
     }
     stream_generator.finish();
     pthread_barrier_wait(&barrier_end);
+=======
+{{include_tuples(tuples)}}
+
+
+std::mutex mutex_print;
+pthread_barrier_t barrier;
+
+std::atomic<size_t> tuples_sent;
+std::atomic<size_t> tuples_received;
+std::atomic<size_t> batches_sent;
+std::atomic<size_t> batches_received;
+
+
+template <typename T>
+void mr_thread(
+    const size_t idx,
+    fx::OCL & ocl,
+    const std::vector<T, fx::aligned_allocator<T> > & dataset,
+    const size_t iterations,
+    const size_t num_batches,
+    const size_t batch_size
+)
+{
+    fx::MemoryReader<T> mr(ocl, batch_size, num_batches, idx);
+    size_t _tuples_sent = 0;
+    size_t _batch_sent = 0;
+
+    pthread_barrier_wait(&barrier);
+
+    for (size_t it = 0; it < iterations; ++it) {
+        // T * batch = mr.get_batch();
+        // fx::fill_batch_with_dataset<T>(dataset, batch, batch_size);
+
+        // mr.push(batch, batch_size, (it == (iterations - 1)));
+        // _tuples_sent += batch_size;
+        // _batch_sent++;
+
+        const bool last_batch = it == (iterations - 1);
+        size_t idx = tuples_sent % dataset.size();
+        for (size_t i = 0; i < batch_size; ++i) {
+            const bool last = last_batch && i == (batch_size - 1);
+            mr.push(dataset[idx], last);
+
+            idx++;
+            if (idx == dataset.size()) {
+                idx = 0;
+            }
+        }
+        _tuples_sent += batch_size;
+        _batch_sent++;
+    }
+
+    mr.finish();
+>>>>>>> 8773af2059839c905137bd3df9916b2dab11bea1
 
     tuples_sent += _tuples_sent;
     batches_sent += _batch_sent;
