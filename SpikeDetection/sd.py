@@ -1,6 +1,6 @@
 import sys
 sys.path.insert(0, '..')
-from FSP import *
+from FSPX import *
 
 
 def next_power_of_two(x):

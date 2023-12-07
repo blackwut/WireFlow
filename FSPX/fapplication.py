@@ -694,7 +694,8 @@ class FGeneratorXilinx:
         filepath = path.join(self.app.common_dir, filename)
         if rewrite or not path.isfile(filepath):
             template = read_template_file(self.app.dest_dir, filename, 'xilinx')
-            result = template.render(constants=self.app.constants | self.get_par_constants())
+            result = template.render(constants=self.app.constants,
+                                     par_constants=self.get_par_constants())
             file = open(filepath, mode='w+')
             file.write(result)
             file.close()
