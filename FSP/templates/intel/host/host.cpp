@@ -10,7 +10,6 @@
 #include <unistd.h>
 #include <atomic>
 
-#define MEASURE_LATENCY 1
 #if MEASURE_LATENCY
 #include "metric/sampler.hpp"
 #include "metric/metric_group.hpp"
@@ -113,7 +112,7 @@ void sink_thread(FPipeGraph<SourceType_t, SinkType_t> & pipe,
     uint64_t _received_tuples = 0;
     uint64_t _received_batches = 0;
 
-#if MEASURE_LATENCY  
+#if MEASURE_LATENCY
     latency::Sampler<uint32_t> latency_sampler(1);
     latency::metric_group.add("latency_ns", latency_sampler);
 #endif
@@ -339,7 +338,7 @@ int main(int argc, char * argv[])
     {% endif %}
 
     pipe.wait_and_stop();
-    
+
     {% if source %}
     for (size_t i = 0; i < source_par; ++i) {
         source_threads[i].join();
@@ -355,7 +354,7 @@ int main(int argc, char * argv[])
 // #if MEASURE_LATENCY
 //     // computing latency for each tuple
 //     util::Sampler latency_sampler(0);
-//     if (results.size() > 0) { 
+//     if (results.size() > 0) {
 //         for (sink_batch & b : results) {
 //             latency_sampler.add(b.sink_timestamp - b.source_timestamp);
 //         }
