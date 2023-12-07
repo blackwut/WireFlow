@@ -1,19 +1,10 @@
-import os
-from os import path
 import sys
-sys.path.insert(0, path.join(os.path.pardir))
+sys.path.insert(0, '..')
+from FSPX import *
 
-from FSP import *
 
-
-def next_power_of_two(n):
-    if n == 0:
-        return 1
-    if n & (n - 1) == 0:
-        return n
-    while n & (n - 1) > 0:
-        n &= (n - 1)
-    return n << 1
+def next_power_of_two(x):
+    return 1 if x == 0 else 2**(x - 1).bit_length()
 
 
 source_par = 1
