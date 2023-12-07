@@ -873,7 +873,8 @@ class FGeneratorXilinx:
 
         if rewrite or not path.isfile(filename):
             template = read_template_file(self.app.dest_dir, 'host.cpp', 'xilinx')
-            result = template.render(tuples=self.get_tuples(),
+            result = template.render(dest_dir=self.app.dest_dir,
+                                     tuples=self.get_tuples(),
                                      mr=self.app.memory_reader,
                                      mw=self.app.memory_writer)
             file = open(filename, mode='w+')
