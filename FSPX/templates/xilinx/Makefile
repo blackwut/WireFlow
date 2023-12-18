@@ -1,4 +1,4 @@
-{%- macro define_par(operators)%}
+{%- macro define_pars(operators)%}
 {% for op in operators %}
 {{op.get_par_macro()}} ?= {{op.par}}
 {% endfor %}
@@ -17,8 +17,9 @@
 {%- endmacro %}
 # INPUTS
 HOSTMEM ?= {{ 1 if transfer_mode == transferMode.HOST else 0 }}
+MEASURE_LATENCY ?= 0
 KERNEL_NAME ?= {{app_name}}
-{{define_par(operators)}}
+{{define_pars(operators)}}
 
 ################################################################################
 #
@@ -87,20 +88,24 @@ VPP_PACKAGE_FLAGS := --package.out_dir $(BUILD_DIR)
 # Kernel names and source files
 #
 ################################################################################
+{% if mr %}
 # MEMORY_READER
 MEMORY_READER_KERNEL_NAME := memory_reader
 MEMORY_READER_CPP := device/$(MEMORY_READER_KERNEL_NAME).cpp
 MEMORY_READER_XO := $(BUILD_DIR)/$(MEMORY_READER_KERNEL_NAME).xo
+{% endif %}
 
 # COMPUTE
 COMPUTE_KERNEL_NAME := compute
 COMPUTE_CPP := device/$(COMPUTE_KERNEL_NAME).cpp
 COMPUTE_XO := $(BUILD_DIR)/$(COMPUTE_KERNEL_NAME).xo
 
+{% if mw %}
 # MEMORY_WRITER
 MEMORY_WRITER_KERNEL_NAME := memory_writer
 MEMORY_WRITER_CPP := device/$(MEMORY_WRITER_KERNEL_NAME).cpp
 MEMORY_WRITER_XO := $(BUILD_DIR)/$(MEMORY_WRITER_KERNEL_NAME).xo
+{% endif %}
 
 # BITSTREAM
 KERNEL_LINK_XCLBIN := $(BUILD_DIR)/$(KERNEL_NAME).link.xclbin
@@ -117,6 +122,7 @@ ifeq ($(HOSTMEM), 1)
 	GENERATE_SP_FUNCTION := generate_sp_host
 endif
 
+{% if mr %}
 # MEMORY_READER
 MR_SCRIPT := $(FSPX_INCLUDE)/utils/memory_reader.sh
 MR_NK := $(shell bash -c 'source "$(MR_SCRIPT)" && generate_nk "$({{mr.get_par_macro()}})"')
@@ -124,12 +130,14 @@ MR_SC := $(shell bash -c 'source "$(MR_SCRIPT)" && generate_sc "$({{mr.get_par_m
 MR_SP := $(shell bash -c 'source "$(MR_SCRIPT)" && $(GENERATE_SP_FUNCTION) "$({{mr.get_par_macro()}})"')
 MR_COMPILE_FLAGS := $(MR_NK) $(MR_SP)
 MR_LINK_FLAGS := $(MR_COMPILE_FLAGS) $(MR_SC)
+{% endif %}
 
 # COMPUTE
 COMPUTE_NK := "--connectivity.nk=$(COMPUTE_KERNEL_NAME):1:$(COMPUTE_KERNEL_NAME)_0"
 COMPUTE_COMPILE_FLAGS := $(COMPUTE_NK) {{compiler_define_par_inline(operators, ' ')}}
 COMPUTE_LINK_FLAGS := $(COMPUTE_COMPILE_FLAGS)
 
+{% if mw %}
 # MEMORY_WRITER
 MW_SCRIPT := $(FSPX_INCLUDE)/utils/memory_writer.sh
 MW_NK := $(shell bash -c 'source "$(MW_SCRIPT)" && generate_nk "$({{mw.get_par_macro()}})"')
@@ -137,6 +145,7 @@ MW_SC := $(shell bash -c 'source "$(MW_SCRIPT)" && generate_sc "$({{mw.get_par_m
 MW_SP := $(shell bash -c 'source "$(MW_SCRIPT)" && $(GENERATE_SP_FUNCTION) "$({{mw.get_par_macro()}})"')
 MW_COMPILE_FLAGS := $(MW_NK) $(MW_SP)
 MW_LINK_FLAGS := $(MW_COMPILE_FLAGS) $(MW_SC)
+{% endif %}
 
 ################################################################################
 #
@@ -146,11 +155,21 @@ MW_LINK_FLAGS := $(MW_COMPILE_FLAGS) $(MW_SC)
 CXX = g++
 CXX_FLAGS = -std=c++17
 CXX_FLAGS += -Wall -Wextra -fmessage-length=0 -Wno-unknown-pragmas -Wno-unused-label -Wno-unused-variable -Wno-unused-function -Wno-unused-but-set-variable
-# CXX_FLAGS += -g
+
+ifdef DEBUG
+CXX_FLAGS += -g
+else
 CXX_FLAGS += -O3 -DNDEBUG -finline-functions  -DWF_RELEASE
+endif
+
 ifeq ($(HOSTMEM), 1)
 	CXX_FLAGS += -DWF_HOSTMEM
 endif
+
+ifeq ($(MEASURE_LATENCY), 1)
+	CXX_FLAGS += -DMEASURE_LATENCY
+endif
+
 # CXX_FLAGS += -fsanitize=address
 # CXX_FLAGS += -fsanitize=thread
 # CXX_FLAGS += -fno-omit-frame-pointer -fsanitize-address-use-after-scope -fsanitize=undefined -fno-sanitize-recover=all -fstack-protector -fstack-clash-protection -fPIE -pie -Wl,-z,relro,-z,now -Wl,-z,noexecstack -Wl,-z,defs -Wl,-z,combreloc
@@ -167,21 +186,29 @@ host: host/host.cpp
 	mkdir -p bin
 	$(CXX) $(CXX_FLAGS) $(CXX_INCLUDES) -o bin/host $< $(CXX_LDFLAGS)
 
+{% if mr %}
 $(MEMORY_READER_XO): $(MEMORY_READER_CPP)
 	$(VPP) --kernel $(MEMORY_READER_KERNEL_NAME) $(VPP_FLAGS) $(VPP_INCLUDES) $(MR_COMPILE_FLAGS) -c -o $@ $<
+{% endif %}
 
 $(COMPUTE_XO): $(COMPUTE_CPP)
 	$(VPP) --kernel $(COMPUTE_KERNEL_NAME) $(VPP_FLAGS) $(VPP_INCLUDES) $(COMPUTE_COMPILE_FLAGS) -c -o $@ $<
 
+{% if mw %}
 $(MEMORY_WRITER_XO): $(MEMORY_WRITER_CPP)
 	$(VPP) --kernel $(MEMORY_WRITER_KERNEL_NAME) $(VPP_FLAGS) $(VPP_INCLUDES) $(MW_COMPILE_FLAGS) -c -o $@ $<
+{% endif %}
 
-$(KERNEL_LINK_XCLBIN): $(MEMORY_READER_XO) $(COMPUTE_XO) $(MEMORY_WRITER_XO)
+{% if mr or mw %}
+$(KERNEL_LINK_XCLBIN): {{ "$(MEMORY_READER_XO)" if mr }} $(COMPUTE_XO) {{ "$(MEMORY_WRITER_XO)" if mw }}
 	$(VPP) --link $(VPP_FLAGS) $(VPP_LINK_FLAGS) $(MR_LINK_FLAGS) $(COMPUTE_LINK_FLAGS) $(MW_LINK_FLAGS) -o $(KERNEL_LINK_XCLBIN) $(+)
 
 bitstream: $(KERNEL_LINK_XCLBIN)
 	$(VPP) --package $(VPP_PACKAGE_FLAGS) $(KERNEL_LINK_XCLBIN) $(VPP_FLAGS) -o $(KERNEL_XCLBIN)
-
+{% else %}
+bitstream: $(COMPUTE_XO)
+	$(VPP) --link $(VPP_FLAGS) -o $(KERNEL_XCLBIN) $(+)
+{% endif %}
 
 all: emconfig $(KERNEL_XCLBIN) host
 

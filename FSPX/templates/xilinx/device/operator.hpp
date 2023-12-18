@@ -5,6 +5,16 @@
 {%- endif %}
 {%- endmacro %}
 
+{%- macro generator_functor(t_in, t_out) %}
+void operator()(const uint64_t i, {{t_out}} & out, bool & last) {
+#pragma HLS INLINE
+    out.key = static_cast<unsigned int>(i % max_key);
+    out.value = static_cast<float>(i / (float)max_key);
+
+    last = (i == size - 1);
+}
+{%- endmacro %}
+
 {%- macro map_functor(t_in, t_out) %}
 void operator()({{t_in}} in, {{t_out}} & out)
 {
@@ -36,13 +46,23 @@ void operator()({{t_in}} in, FlatMapShipper<{{t_out}}> & shipper)
 }
 {%- endmacro %}
 
+{%- macro drainer_functor(t_in, t_out) %}
+void operator()(const int i, const {{t_in}} & in, const bool last) {
+    #pragma HLS INLINE
+    }
+{%- endmacro %}
+
 {%- macro op_functor(op) %}
-{% if op.is_map() %}
+{% if op.is_generator() %}
+{{ generator_functor(op.i_datatype, op.o_datatype) }}
+{% elif op.is_map() %}
 {{ map_functor(op.i_datatype, op.o_datatype) }}
 {% elif op.is_filter() %}
 {{ filter_functor(op.i_datatype, op.o_datatype) }}
 {% elif op.is_flat_map() %}
 {{ flatmap_functor(op.i_datatype, op.o_datatype) }}
+{% elif op.is_drainer() %}
+{{ drainer_functor(op.i_datatype, op.o_datatype) }}
 {% endif %}
 {%- endmacro %}
 
@@ -51,6 +71,14 @@ void operator()({{t_in}} in, FlatMapShipper<{{t_out}}> & shipper)
 
 struct {{ op.name }}
 {
+    {% if op.is_generator() %}
+    uint64_t size;
+    unsigned int max_key;
+    {{ op.name }}(uint64_t size, unsigned int max_key)
+    : size(size)
+    , max_key(max_key)
+    {}
+    {% else %}
     // Private members
     {% for b in op.get_private_buffers() %}
     {{ b.datatype }} {{ b.name }};
@@ -61,6 +89,7 @@ struct {{ op.name }}
 
     // Constructor
     {{ op.name }}() = default;
+    {% endif %}
 
     {{op_functor(op) | indent(4)}}
 };

@@ -1,0 +1,8 @@
+Application,Bitstream,MemoryReader,Predictor,MemoryWriter,MR Buffers,MW Buffers,MR BatchSize,MW BatchSize,Sampling,TupleSent,BatchesSent,TuplesReceived,BatchesReceived,Throughput MR (t/s),Throughput MR (B/s),Throughput MW (t/s),Throughput MW (B/s),Time (ms),Time Compute (ns),Samples,Total,Mean,0 (us),5 (us),25 (us),50 (us),75 (us),95 (us),100 (us)
+FraudDetectionSkeleton,./kernels/fds111/hw/build/fds.xclbin,1,1,1,0,0,0,0,0,1073741824,0,0,0,299927883798882,4798846140782112,0,0,6654,3580,0,0,0,18446744073709551615,0,0,0,0,0,0
+FraudDetectionSkeleton,./kernels/fds333/hw/build/fds.xclbin,3,3,3,0,0,0,0,0,3221225472,0,0,0,898278157278304,14372450516452864,0,0,6801,3586,0,0,0,18446744073709551615,0,0,0,0,0,0
+FraudDetectionSkeleton,./kernels/fds555/hw/build/fds.xclbin,5,5,5,0,0,0,0,0,5368709120,0,0,0,1498383790120011,23974140641920176,0,0,6791,3583,0,0,0,18446744073709551615,0,0,0,0,0,0
+FraudDetectionSkeleton,./kernels/fds111/hw/build/fds.xclbin,1,1,1,0,0,0,0,0,1073741824,0,0,0,299927883798882,4798846140782112,0,0,6541,3580,0,0,0,18446744073709551615,0,0,0,0,0,0
+FraudDetectionSkeleton,./kernels/fds111/hw/build/fds.xclbin,1,1,1,0,0,0,0,0,1073741824,0,0,0,299927883798882,4798846140782112,0,0,6636,3580,0,0,0,18446744073709551615,0,0,0,0,0,0
+FraudDetectionSkeleton,./kernels/fds333/hw/build/fds.xclbin,3,3,3,0,0,0,0,0,3221225472,0,0,0,898278157278304,14372450516452864,0,0,6718,3586,0,0,0,18446744073709551615,0,0,0,0,0,0
+FraudDetectionSkeleton,./kernels/fds555/hw/build/fds.xclbin,5,5,5,0,0,0,0,0,5368709120,0,0,0,1498383790120011,23974140641920176,0,0,7004,3583,0,0,0,18446744073709551615,0,0,0,0,0,0

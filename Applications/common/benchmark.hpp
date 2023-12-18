@@ -12,7 +12,7 @@ size_t get_tuples_sec(size_t tuples, uint64_t time)
     return tuples / (time / 1e9);
 }
 
-size_t get_bytes_sec(size_t tuples, size_t tuple_size, uint64_t time)
+size_t get_bytes_sec(size_t tuples, uint64_t time, size_t tuple_size)
 {
     return get_tuples_sec(tuples, time) * tuple_size;
 }
@@ -71,13 +71,13 @@ void dump_benchmark(
                 << "Samples" << ","
                 << "Total" << ","
                 << "Mean" << ","
-                << "0" << ","
-                << "5" << ","
-                << "25" << ","
-                << "50" << ","
-                << "75" << ","
-                << "95" << ","
-                << "100"
+                << "0 (us)" << ","
+                << "5 (us)" << ","
+                << "25 (us)" << ","
+                << "50 (us)" << ","
+                << "75 (us)" << ","
+                << "95 (us)" << ","
+                << "100 (us)"
                 << std::endl;
     }
 
@@ -100,9 +100,9 @@ void dump_benchmark(
             << tuples_received << ","
             << batches_received << ","
             << get_tuples_sec(tuples_sent, elapsed_time_compute) << ","
-            << get_bytes_sec(tuples_sent, elapsed_time_compute) << ","
-            << get_tuples_sec(tuples_received, tuple_sent_size, elapsed_time_compute) << ","
-            << get_bytes_sec(tuples_received, tuple_received_size, elapsed_time_compute) << ","
+            << get_bytes_sec(tuples_sent, elapsed_time_compute, tuple_sent_size) << ","
+            << get_tuples_sec(tuples_received, elapsed_time_compute) << ","
+            << get_bytes_sec(tuples_received, elapsed_time_compute, tuple_received_size) << ","
             << elapsed_time_host << ","
             << elapsed_time_compute << ","
             << latency_metric.getN() << ","
@@ -111,7 +111,7 @@ void dump_benchmark(
             << (uint64_t)(latency_metric.min() / 1e3) << ","
             << (uint64_t)(latency_metric.percentile(0.05) / 1e3) << ","
             << (uint64_t)(latency_metric.percentile(0.25) / 1e3) << ","
-            << (uint64_t)(latency_metric.percentile(0.5) / 1e3) << ","
+            << (uint64_t)(latency_metric.percentile(0.50) / 1e3) << ","
             << (uint64_t)(latency_metric.percentile(0.75) / 1e3) << ","
             << (uint64_t)(latency_metric.percentile(0.95) / 1e3) << ","
             << (uint64_t)(latency_metric.max() / 1e3)

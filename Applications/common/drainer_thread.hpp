@@ -40,11 +40,18 @@ void stream_drainer_thread(
         size_t items_written = 0;
         T * batch = stream_drainer.pop(&items_written, &done);
 
+        #ifdef MEASURE_LATENCY
         const uint64_t current_time = fx::current_time_nsecs();
         for (size_t i = 0; i < items_written; ++i) {
-            const double latency = (current_time - app_start_time) - batch[i].timestamp * uint64_t(100);
+            // 32bit timestamp with resolution of 100ns relative to app_start_time
+            // const double latency = (current_time - app_start_time) - batch[i].timestamp * uint64_t(100);
+
+            // 32bit timestamp with resolution of 16ns relative to app_start_time
+            const double latency = (current_time - app_start_time) - batch[i].timestamp * uint64_t(16);
+
             latency_sampler.add(latency, current_time);
         }
+        #endif
 
         stream_drainer.put_batch(batch, batch_size);
         _tuples_received += items_written;

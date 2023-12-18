@@ -71,4 +71,5 @@ def read_template_file(source_code_dir, path, subpath="intel"):
     env.lstrip_blocks = True
     env.trim_blocks = True
     env.filters['generate_flat_map'] = generate_flat_map_code
+
     return env.get_template(path)

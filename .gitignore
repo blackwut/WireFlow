@@ -127,3 +127,43 @@ Session.vim
 env
 
 .vscode
+
+# Vitis HLS
+.ipcache/
+.run/
+.Xil/
+.theia
+_x/
+*.xclbin
+*.xclbin.*
+*.xo
+*.xo.*
+*.log
+*.protoinst
+*.wcfg
+*.wdb
+emconfig.json
+*.jou
+*.ltx
+.repo.yaml
+device_trace_*.csv
+hal_host_trace.csv
+native_trace.csv
+opencl_trace.csv
+summary.csv
+*.run_summary
+.lock
+kernels/
+main
+
+# Vitis HLS
+Debug/
+.apc/
+.settings/
+solution/
+.cproject
+.project
+.vitis_hls_log_all.xml
+kernel.xml
+hls.app
+

@@ -42,19 +42,30 @@ class FApplication:
         self.constants = constants
 
         self.memory_reader = None
+        self.generator = None
         self.internal_nodes = []
         self.memory_writer = None
+        self.drainer = None
 
-        self.intel_generator = FGeneratorIntel(self)
+        # self.intel_generator = FGeneratorIntel(self)
         self.xilinx_generator = FGeneratorXilinx(self)
 
     def get_nodes(self):
         nodes = []
         if self.memory_reader:
             nodes.append(self.memory_reader)
+
+        if self.generator:
+            nodes.append(self.generator)
+
         nodes.extend(self.internal_nodes)
+
         if self.memory_writer:
             nodes.append(self.memory_writer)
+
+        if self.drainer:
+            nodes.append(self.drainer)
+
         return nodes
 
     def generate_host(self,
@@ -134,40 +145,23 @@ class FApplication:
                 sys.exit("Memory reader already present!")
             self.memory_reader = node
 
+        elif node.is_generator():
+            if self.generator:
+                sys.exit("Generator already present!")
+            self.generator = node
+
         elif node.is_memory_writer():
             if self.memory_writer:
                 sys.exit("Memory writer already present!")
             self.memory_writer = node
 
-        elif node.is_generator():
-            flag = False
-            for n in self.internal_nodes:
-                if n.is_generator():
-                    flag = True
-                    break
-            if flag:
-                sys.exit("Generator already present!")
-            self.internal_nodes.insert(0, node)
         elif node.is_drainer():
-            flag = False
-            for n in self.internal_nodes:
-                if n.is_drainer():
-                    flag = True
-                    break
-            if flag:
+            if self.drainer:
                 sys.exit("Drainer already present!")
-            self.internal_nodes.append(node)
+            self.drainer = node
 
         elif node.kind in (FOperatorKind.MAP, FOperatorKind.FILTER, FOperatorKind.FLAT_MAP):
-            flag = False
-            for n in self.internal_nodes:
-                if n.is_drainer():
-                    flag = True
-                    break
-            if flag:
-                self.internal_nodes.insert(-1, node)
-            else:
-                self.internal_nodes.append(node)
+            self.internal_nodes.append(node)
         else:
             sys.exit("Supplied node is not of type MEMORY_READER, MAP, FILTER, FLAT_MAP, MEMORY_WRITER, GENERATOR, or DRAINER")
 
@@ -202,9 +196,6 @@ class FApplication:
                 cur.i_channel = c
                 self.channels.append(c)
 
-        # # Creates folders
-        # self.prepare_folders()
-
 
 class FGeneratorIntel:
 
@@ -212,6 +203,7 @@ class FGeneratorIntel:
                  app: FApplication):
         assert app
         self.app = app
+        sys.exit("Intel target is under development")
 
     def get_par_constants(self):
         cs = {}
@@ -653,9 +645,6 @@ class FGeneratorXilinx:
             if n.is_memory_reader() or n.is_memory_writer():
                 if n.has_compute_function():
                     print(n.name + ": compute function is not generated for Xilinx target")
-            # if n.is_generator() or n.is_drainer():
-            #     if n.has_compute_function():
-            #         print(n.name + ": compute function is not generated for Xilinx target")
 
 
 ################################################################################
@@ -740,8 +729,8 @@ class FGeneratorXilinx:
                 file.close()
 
     def generate_functor_for(self, node, rewrite=False):
-        # check if node is not a generator, drainer, memory reader or memory writer
-        assert not node.is_generator() and not node.is_drainer() and not node.is_memory_reader() and not node.is_memory_writer()
+        # check if node is not a memory reader or memory writer
+        assert not node.is_memory_reader() and not node.is_memory_writer()
 
         filename = node.name + '.hpp'
 
@@ -763,23 +752,14 @@ class FGeneratorXilinx:
 
     def generate_functions(self, rewrite=False):
 
+        if self.app.generator:
+            self.generate_functor_for(self.app.generator, rewrite)
+
         for node in self.app.internal_nodes:
             self.generate_functor_for(node, rewrite)
-            # is_generated = False
-            # filename = node.name + '.hpp'
-            # filepath = path.join(self.app.device_nodes_dir, filename)
 
-            # if self.app.codebase:
-            #     codebase_filepath = path.join(self.app.codebase, 'device', 'nodes', filename)
-            #     if rewrite and path.isfile(codebase_filepath):
-            #         copyfile(codebase_filepath, filepath)
-            #         is_generated = True
-
-            # if not rewrite and path.isfile(filepath):
-            #     is_generated = True
-
-            # if not is_generated:
-            #     self.generate_functor_for(node, rewrite)
+        if self.app.drainer:
+            self.generate_functor_for(self.app.drainer, rewrite)
 
     def generate_makefile(self, rewrite=False):
         filepath = path.join(self.app.base_dir, 'Makefile')
@@ -814,6 +794,9 @@ class FGeneratorXilinx:
             file.close()
 
     def generate_mr_kernel(self, rewrite=False):
+        if not self.app.memory_reader:
+            return
+
         filename = path.join(self.app.device_dir, 'memory_reader.cpp')
         if rewrite or not path.isfile(filename):
             template = read_template_file(self.app.dest_dir, 'memory_reader.cpp', 'xilinx')
@@ -829,12 +812,17 @@ class FGeneratorXilinx:
             result = template.render(operators=self.app.internal_nodes,
                                      nodes=self.app.get_nodes(),
                                      mr=self.app.memory_reader,
-                                     mw=self.app.memory_writer)
+                                     mw=self.app.memory_writer,
+                                     generator=self.app.generator,
+                                     drainer=self.app.drainer)
             file = open(filename, mode='w+')
             file.write(result)
             file.close()
 
     def generate_mw_kernel(self, rewrite=False):
+        if not self.app.memory_writer:
+            return
+
         filename = path.join(self.app.device_dir, 'memory_writer.cpp')
         if rewrite or not path.isfile(filename):
             template = read_template_file(self.app.dest_dir, 'memory_writer.cpp', 'xilinx')
@@ -857,6 +845,8 @@ class FGeneratorXilinx:
     def generate_host_includes(self, rewrite=False):
         if self.app.codebase:
             codebase_includes_dir = path.join(self.app.codebase, 'host', 'includes')
+            if not path.isdir(codebase_includes_dir):
+                return
             for f in os.listdir(codebase_includes_dir):
                 src_path = path.join(codebase_includes_dir, f)
                 dest_path = path.join(self.app.host_includes_dir, f)
@@ -871,6 +861,10 @@ class FGeneratorXilinx:
             if rewrite and path.isfile(codebase_filepath):
                 copyfile(codebase_filepath, filename)
                 return
+
+        if self.app.generator or self.app.drainer:
+            print("Host code generation is not supported when generator or drainer are present in Xilinx target")
+            return
 
         if rewrite or not path.isfile(filename):
             template = read_template_file(self.app.dest_dir, 'host.cpp', 'xilinx')

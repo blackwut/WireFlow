@@ -1,0 +1,7 @@
+Application,Bitstream,MemoryReader,AverageCalculator,SpikeDetector,MemoryWriter,MR Buffers,MW Buffers,MR BatchSize,MW BatchSize,Sampling,TupleSent,BatchesSent,TuplesReceived,BatchesReceived,Throughput MR (t/s),Throughput MR (B/s),Throughput MW (t/s),Throughput MW (B/s),Time (ms),Time Compute (ns),Samples,Total,Mean,0 (us),5 (us),25 (us),50 (us),75 (us),95 (us),100 (us)
+SpikeDetectionSkeleton,./kernels/sds1111/hw/build/sds.xclbin,1,1,1,1,0,0,0,0,0,1073741824,0,0,0,300011685945794,2400093487566352,0,0,3812,3579,0,0,0,18446744073709551615,0,0,0,0,0,0
+SpikeDetectionSkeleton,./kernels/sds2222/hw/build/sds.xclbin,2,2,2,2,0,0,0,0,0,2147483648,0,0,0,600023371891589,4800186975132712,0,0,6318,3579,0,0,0,18446744073709551615,0,0,0,0,0,0
+SpikeDetectionSkeleton,./kernels/sds3333/hw/build/sds.xclbin,3,3,3,3,0,0,0,0,0,3221225472,0,0,0,872724321863993,6981794574911944,0,0,6820,3691,0,0,0,18446744073709551615,0,0,0,0,0,0
+SpikeDetectionSkeleton,./kernels/sds4444/hw/build/sds.xclbin,4,4,4,4,0,0,0,0,0,4294967296,0,0,0,1200046743783179,9600373950265432,0,0,6787,3579,0,0,0,18446744073709551615,0,0,0,0,0,0
+SpikeDetectionSkeleton,./kernels/sds5555/hw/build/sds.xclbin,5,5,5,5,0,0,0,0,0,5368709120,0,0,0,1476948863823934,11815590910591472,0,0,6837,3635,0,0,0,18446744073709551615,0,0,0,0,0,0
+SpikeDetectionSkeleton,./kernels/sds6666/hw/build/sds.xclbin,6,6,6,6,0,0,0,0,0,6442450944,0,0,0,1745448643727987,13963589149823896,0,0,6860,3691,0,0,0,18446744073709551615,0,0,0,0,0,0
